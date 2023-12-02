@@ -43,6 +43,20 @@ def alloff():
     logger.getChild("all_off").info(f"turning off all the lights")
 
 
+@app.get("/temp")
+def get_rpi_temp():
+    """measure the temperature of the raspberry pi"""
+    import subprocess
+
+    result = subprocess.run(
+        ["vcgencmd", "measure_temp"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    return result.stdout
+
+
 @app.post("/receivedf")
 async def receive_dataframe(request: Request):
     """
