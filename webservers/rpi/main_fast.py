@@ -10,6 +10,9 @@ import colorlog
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi import Request
+import json
+from pathlib import Path
+
 
 logger = logging.getLogger("christmas_lights_web")
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -29,6 +32,8 @@ console_handler.setFormatter(color_formatter)
 logger.addHandler(console_handler)
 logger.setLevel(logging.DEBUG)
 
+server_url = 'localhost'
+server_port = 12345
 
 class JsonData(BaseModel):
     json_raw: str
@@ -40,7 +45,18 @@ app = FastAPI()
 @app.post("/alloff")
 def alloff():
     """Turn off all of the lights"""
+    data = {'command':'fill','args':[0,0,0]}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
     logger.getChild("all_off").info(f"turning off all the lights")
+
+@app.post("/allRGB")
+def allred(r:int, g:int, b:int):
+    """Turn on the RGB lights"""
+    data = {'command':'fill','args':[r,g,b]}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    logger.getChild("all_red").info(f"turning off all the lights")
 
 @app.post("/oneoff")
 def oneoff(index:int):
@@ -60,6 +76,13 @@ def get_rpi_temp():
         text=True,
     )
     return result.stdout
+
+@app.get("/files")
+def get_list_of_csvs():
+    """Return a list of the current CSV's that can be played"""
+    csv_file_path = Path('/home/pi/github/xmastree2023/examples')
+    csv_files = list(map(str,list(csv_file_path.glob('*.csv'))))
+    return json.dumps(csv_files)
 
 
 @app.post("/receivedf")
@@ -115,6 +138,6 @@ async def receive_dataframe(request: Request):
 
 
 if __name__ == "__main__":
-    host = "localhost"
+    host = "192.168.1.190"
     port = 1234
     uvicorn.run(app, host=host, port=port)
