@@ -42,6 +42,11 @@ def alloff():
     """Turn off all of the lights"""
     logger.getChild("all_off").info(f"turning off all the lights")
 
+@app.post("/oneoff")
+def oneoff(index:int):
+    """turn off one light at the given index"""
+    logger.getChild("one_off").info(f"turn off the light at {index=}")
+
 
 @app.get("/temp")
 def get_rpi_temp():
