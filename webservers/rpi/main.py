@@ -24,7 +24,8 @@ logger.setLevel(logging.DEBUG)
 
 import board
 import neopixel
-pixels = neopixel.NeoPixel(board.D10, 50)
+led_num = 150
+pixels = neopixel.NeoPixel(board.D10, led_num, auto_write=False)
 pixels.fill((100,100,100))
 pixels.show()
 
@@ -48,9 +49,13 @@ def handle_command(command):
         case "off":
             handle_fill([0,0,0])
         case "single":
-            pass
+            handle_one(command['args'])
         case "list":
-            pass
+            handle_list(command['args'])
+        case "file":
+            handle_file(command['args'])
+        case "pause":
+            handle_pause(command['args'])
         case _:
             pass
     
