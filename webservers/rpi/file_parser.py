@@ -26,7 +26,20 @@ except ImportError:
     )
 import logging
 import time
+import numpy as np
 
+def hex_to_int(hex_color:str):
+    """Convert a hex color string to an integer."""
+    return int(hex_color[1:], 16)
+
+def int_to_hex(int_color:int):
+    """Convert an integer color to a hex string."""
+    return f'#{int_color:06X}'
+
+def rgb_to_hex(r:int, g:int, b:int) -> str:
+    """Convert RGB values to hex color code."""
+    hex_color = f"#{int(r):02X}{int(g):02X}{int(b):02X}"
+    return hex_color
 
 def read_GIFT_file(file_path: Path) -> tuple[list[Led_Location], pd.DataFrame]:
     df = pd.read_csv(file_path, names=["x", "y", "z"])
@@ -83,38 +96,49 @@ def read_from_csv(file_path: Path) -> Sequence:
 
     return Sequence(name=file_path.name, filepath=file_path, frames=frames)
 
-def create_array_from_df_row(row: pd.Series) -> list[str]:
+
+
+def create_array_from_df_row(row: pd.Series) -> list[int]:
     # this took 7.8 seconds while using dicts
     # TODO: if this is slow, this is duplicating a lot of work to get the column headers
     header_values: list[str] = row.axes[0].tolist()
     frame_id = int(row[header_values[0]])
+    size_of_series = len(row)
+    size_of_array = (size_of_series -1)//3
+    logging.getLogger('light_driver').debug(f'{size_of_array=}')
+
+    # result = np.empty((1,(size_of_array-1)//3))
+    result = np.array([[0, 0, 0] for _ in range(size_of_array)])
+
     column_name = "R_12"
-    led_dict = {}
-    max_led_number = 0
+  
     for column_name in header_values[1:]:
         # data_value will be [RGB]_[LED #]
         color_str, led_str = column_name.split("_")
         converted_led_number = int(led_str)
-        max_led_number = max(converted_led_number, max_led_number)
-        converted_color_value = float(row[column_name])
-        working_color = led_dict.get(converted_led_number, Color(0, 0, 0))
+        converted_color_value = int(row[column_name])
+        working_color:list[int] = result[converted_led_number]
+        logging.getLogger('light_driver').debug(f'{converted_led_number=}{converted_color_value=}')
         match color_str:
             case "R":
-                working_color.r = converted_color_value
+                working_color[0] = converted_color_value
             case "G":
-                working_color.g = converted_color_value
+                working_color[1] = converted_color_value
             case "B":
-                working_color.b = converted_color_value
+                working_color[2] = converted_color_value
             case _:
                 raise ValueError(
                     f"Got a color of {color_str} for led {led_str}, which is not R,G, or B"
                 )
-        led_dict[converted_led_number] = working_color
-
-    results = []
-    for i in range(max_led_number):
-        results.append(led_dict[i].to_hex())
-    
+        result[converted_led_number] = working_color
+        # logging.getLogger('light_driver').debug(f'{working_color=}')
+ 
+    results = np.empty(size_of_series)
+    results[0] = frame_id
+    for index, color in enumerate(results):
+        logging.getLogger('light_driver').debug(f'{color=}')
+        hex_code = rgb_to_hex(int(color[0]),int(color[1]),int(color[2]))
+        results[index+1] = hex_to_int(hex_code)
     return results
 
 def create_frame_from_df_row(row: pd.Series) -> Frame:

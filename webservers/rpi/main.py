@@ -60,6 +60,14 @@ def rgb_to_hex(r:int, g:int, b:int) -> str:
     hex_color = f"#{r:02X}{g:02X}{b:02X}"
     return hex_color
 
+def int_to_hex(int_color:int):
+    """Convert an integer color to a hex string."""
+    return f'#{int_color:06x}'
+
+def hex_to_int(hex_color:str):
+    """Convert a hex color string to an integer."""
+    return int(hex_color[1:], 16)
+
 def handle_fill(args):
     # converts RGB into a GRB hex
     global current_sequence
@@ -182,7 +190,11 @@ def running(stop_event: threading.Event) -> None:
     while not stop_event.is_set():
         for index, row in current_sequence.iterrows():
             for pixel_num in range(led_num):
-                pixels[pixel_num] = hex_to_rgb(row[f'LED_{pixel_num}'])
+                color = row[f'LED_{pixel_num}']
+                if type(color) == int:
+                    pixels[pixel_num] = hex_to_rgb(int_to_hex(color))
+                elif type(color) == str:
+                    pixels[pixel_num] = hex_to_rgb(color)
             pixels.show()
             while fps==0:
                 time.sleep(0.5)
