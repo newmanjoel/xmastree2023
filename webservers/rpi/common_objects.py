@@ -1,10 +1,14 @@
 from dataclasses import dataclass
 import functools
 from itertools import starmap
+import itertools
 from pathlib import Path
 import pandas as pd
 from pyparsing import col
+import logging
+from functools import lru_cache
 
+import time
 
 @dataclass
 class Color:
@@ -28,7 +32,7 @@ class Color:
         self.r = int(hex_string[1:3], 16)
         self.g = int(hex_string[3:5], 16)
         self.b = int(hex_string[5:7], 16)
-        self.enforce_bounds()
+        
 
 
 @dataclass
@@ -51,6 +55,10 @@ class Led:
     color: Color
 
 
+@lru_cache(maxsize=2)
+def create_led_names(led_num:int) -> list[str]:
+    return [f'LED_{LED_NUMBER}' for LED_NUMBER in range(led_num)]
+
 @dataclass
 class Frame:
     id: int
@@ -61,6 +69,49 @@ class Frame:
         for led in self.lights:
             results[led.id] = led.color.to_hex()
         return results
+    
+    def create_from_series(self, input_series:pd.Series, frame_id:int, hex_colors:bool=True) -> None:
+        # clear current values
+        self.lights = []
+        self.id = frame_id
+
+        for index,value in input_series.items():
+            hex_color = Color(0,0,0)
+            hex_color.from_hex(value)
+            led = Led(index,hex_color)
+            self.lights.append(led)
+    
+    def convert_to_df(self) -> pd.DataFrame:
+        led_num = len(self.lights)
+        columns=create_led_names(led_num)
+        led_colors = [x.color for x in self.lights]
+        data = [x.to_hex() for x in led_colors]
+
+        df = pd.DataFrame([],columns=columns)
+        df.loc[0] = data
+        return df
+    
+    def convert_to_RGB_df(self) -> pd.DataFrame:
+        rgb = ['R','G','B']
+        columns=['FRAME_ID']
+        data = [self.id]
+        for light in self.lights:
+            for color in rgb:
+                columns.append(f'{color}_{light.id}')
+                if color == 'R':
+                    data.append(light.color.r)
+                elif color == 'G':
+                    data.append(light.color.g)
+                elif color == 'B':
+                    data.append(light.color.b)
+
+        # data = list(map(Color.to_hex, led_colors))
+        # logging.getLogger('light_driver').debug(f'{led_num=}\n{columns=}\n{data=}')
+        df = pd.DataFrame([],columns=columns)
+        df.loc[0] = data
+        return df
+
+
 
 
 @dataclass
@@ -68,6 +119,18 @@ class Sequence:
     name: str
     filepath: Path
     frames: list[Frame]
+
+    def create_from_df(self, input_df:pd.DataFrame, name:str, filepath:Path):
+        index: int = 0
+        row: pd.Series = None
+        self.frames = []
+        self.filepath = filepath
+        self.name = name
+
+        for index, row in input_df.iterrows():
+            u_frame = Frame(0,[])
+            u_frame.create_from_series(row,index)
+            self.frames.append(u_frame)
 
     def convert_to_dict(self) -> dict[int, dict[int, str]]:
         results = {}
@@ -81,11 +144,14 @@ class Sequence:
         return df.melt(id_vars=["led_id"], var_name="frame_id", value_name="led_color")
 
     def convert_to_df(self, include_led_column: bool = True) -> pd.DataFrame:
-        color_dict = self.convert_to_dict()
-        results = pd.DataFrame.from_dict(color_dict)
-        if include_led_column:
-            # TODO: fix this so that it pulls the actual list, and not just assumes
-            results["led_id"] = list(range(0, len(self.frames[0].lights)))
+        start = time.time()
+        list_of_dfs = list(map(Frame.convert_to_df, self.frames))
+        end = time.time()
+        logging.getLogger('light_driver').debug(f'took {end-start:.03f}s to convert to dfs')
+        start = time.time()
+        results = pd.concat(list_of_dfs, ignore_index=True)
+        end = time.time()
+        logging.getLogger('light_driver').debug(f'took {end-start:.03f}s to concat the dfs')
         return results
 
 

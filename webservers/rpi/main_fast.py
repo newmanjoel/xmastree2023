@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from fastapi import Request
 import json
 from pathlib import Path
-
+import random
 
 logger = logging.getLogger("christmas_lights_web")
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
@@ -41,6 +41,10 @@ class JsonData(BaseModel):
 
 app = FastAPI()
 
+def rgb_to_hex(r:int, g:int, b:int) -> str:
+    """Convert RGB values to hex color code."""
+    hex_color = f"#{r:02X}{g:02X}{b:02X}"
+    return hex_color
 
 @app.post("/alloff")
 def alloff():
@@ -63,6 +67,26 @@ def oneoff(index:int):
     """turn off one light at the given index"""
     logger.getChild("one_off").info(f"turn off the light at {index=}")
 
+@app.post("/speed")
+def oneoff(fps:float):
+    """set the desired FPS that the sequence will run at. Note that there is an upper limit to this."""
+    json_data = json.dumps({'command':'fps', 'args':fps})
+    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    logger.getChild("speed").info(f"setting the {fps=}")
+
+@app.post("/addRandomColor")
+def addRandomColor():
+    """add a random color to the existing sequence"""
+    n = 150
+    list_to_add = []
+    random_color = rgb_to_hex(random.randint(0,255),random.randint(0,255),random.randint(0,255))
+    
+    for i in range(n):
+        list_to_add.append(random_color)
+    data = {'command':'addlist','args':list_to_add}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    logger.getChild("addRandomColor").info(f"added the color {random_color} to the current sequence")
 
 @app.get("/temp")
 def get_rpi_temp():
@@ -76,6 +100,22 @@ def get_rpi_temp():
         text=True,
     )
     return result.stdout
+
+@app.post("/loadfile")
+def get_list_of_csvs(file_path: Path):
+    """Tell the controller what file you want it to load"""
+    csv_file_path = Path('/home/pi/github/xmastree2023/examples')
+    csv_files = list(map(str,list(csv_file_path.glob('*.csv'))))
+
+    #check to make sure its a valid file
+    if file_path in csv_files:
+        logger.debug(f'Found the file in the CSV list!')
+    
+    data = {'command':'loadfile','args':str(file_path)}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+
+    return json.dumps(csv_files)
 
 @app.get("/files")
 def get_list_of_csvs():
