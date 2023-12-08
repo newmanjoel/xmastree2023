@@ -97,11 +97,12 @@ def get_rpi_temp():
     """measure the temperature of the raspberry pi"""
     data = {"command": "temp", "args": ""}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    with socket.create_connection((server_url, server_port)) as connection_to_rpi:
+        connection_to_rpi.sendall(json_data.encode("utf-8"))
+        json_bytes = connection_to_rpi.recv(10_000)
+        json_text = json.loads(json_bytes.decode("utf-8"))
 
-    return response
+    return json_text
 
 
 @app.post("/loadfile")
