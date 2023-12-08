@@ -191,10 +191,7 @@ def running(stop_event: threading.Event) -> None:
         for index, row in current_sequence.iterrows():
             for pixel_num in range(led_num):
                 color = row[f'LED_{pixel_num}']
-                if type(color) == int:
-                    pixels[pixel_num] = hex_to_rgb(int_to_hex(color))
-                elif type(color) == str:
-                    pixels[pixel_num] = hex_to_rgb(color)
+                pixels[pixel_num] = hex_to_rgb(color)
             pixels.show()
             while fps==0:
                 time.sleep(0.5)
