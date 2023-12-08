@@ -1,12 +1,9 @@
-from io import StringIO
 import socket
-import threading
 
 import pandas as pd
 from requests import JSONDecodeError
 import uvicorn
 import logging
-import colorlog
 from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi import Request
@@ -14,26 +11,14 @@ import json
 from pathlib import Path
 import random
 
-logger = logging.getLogger("christmas_lights_web")
-formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
-color_formatter = colorlog.ColoredFormatter(
-    "%(log_color)s%(asctime)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    log_colors={
-        "DEBUG": "cyan",
-        "INFO": "green",
-        "WARNING": "yellow",
-        "ERROR": "red",
-        "CRITICAL": "bold_red",
-    },
-)
-console_handler = logging.StreamHandler()
-console_handler.setFormatter(color_formatter)
-logger.addHandler(console_handler)
-logger.setLevel(logging.DEBUG)
+from common_objects import setup_common_logger
 
-server_url = 'localhost'
+logger = logging.getLogger("christmas_lights_web")
+logger = setup_common_logger(logger)
+
+server_url = "192.168.1.190"
 server_port = 12345
+
 
 class JsonData(BaseModel):
     json_raw: str
@@ -41,88 +26,104 @@ class JsonData(BaseModel):
 
 app = FastAPI()
 
-def rgb_to_hex(r:int, g:int, b:int) -> str:
+
+def rgb_to_hex(r: int, g: int, b: int) -> str:
     """Convert RGB values to hex color code."""
     hex_color = f"#{r:02X}{g:02X}{b:02X}"
     return hex_color
 
+
 @app.post("/alloff")
 def alloff():
     """Turn off all of the lights"""
-    data = {'command':'fill','args':[0,0,0]}
+    data = {"command": "fill", "args": [0, 0, 0]}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
     logger.getChild("all_off").info(f"turning off all the lights")
 
+
 @app.post("/allRGB")
-def allred(r:int, g:int, b:int):
+def allred(r: int, g: int, b: int):
     """Turn on the RGB lights"""
-    data = {'command':'fill','args':[r,g,b]}
+    data = {"command": "fill", "args": [r, g, b]}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
     logger.getChild("all_red").info(f"turning off all the lights")
 
+
 @app.post("/oneoff")
-def oneoff(index:int):
+def oneoff(index: int):
     """turn off one light at the given index"""
     logger.getChild("one_off").info(f"turn off the light at {index=}")
 
+
 @app.post("/speed")
-def oneoff(fps:float):
+def set_speed(fps: float):
     """set the desired FPS that the sequence will run at. Note that there is an upper limit to this."""
-    json_data = json.dumps({'command':'fps', 'args':fps})
-    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    json_data = json.dumps({"command": "fps", "args": fps})
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
     logger.getChild("speed").info(f"setting the {fps=}")
+
 
 @app.post("/addRandomColor")
 def addRandomColor():
     """add a random color to the existing sequence"""
     n = 150
     list_to_add = []
-    random_color = rgb_to_hex(random.randint(0,255),random.randint(0,255),random.randint(0,255))
-    
+    random_color = rgb_to_hex(
+        random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+    )
+
     for i in range(n):
         list_to_add.append(random_color)
-    data = {'command':'addlist','args':list_to_add}
+    data = {"command": "addlist", "args": list_to_add}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
-    logger.getChild("addRandomColor").info(f"added the color {random_color} to the current sequence")
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
+    logger.getChild("addRandomColor").info(
+        f"added the color {random_color} to the current sequence"
+    )
+
 
 @app.get("/temp")
 def get_rpi_temp():
     """measure the temperature of the raspberry pi"""
-    import subprocess
-
-    result = subprocess.run(
-        ["vcgencmd", "measure_temp"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
+    data = {"command": "temp", "args": ""}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
     )
-    return result.stdout
+
+    return response
 
 @app.post("/loadfile")
-def get_list_of_csvs(file_path: Path):
+def load_csv_file_on_rpi(file_path: Path):
     """Tell the controller what file you want it to load"""
-    csv_file_path = Path('/home/pi/github/xmastree2023/examples')
-    csv_files = list(map(str,list(csv_file_path.glob('*.csv'))))
-
-    #check to make sure its a valid file
-    if file_path in csv_files:
-        logger.debug(f'Found the file in the CSV list!')
-    
-    data = {'command':'loadfile','args':str(file_path)}
+    data = {"command": "loadfile", "args": str(file_path)}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(json_data.encode('utf-8'))
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
 
-    return json.dumps(csv_files)
+    return response
+
 
 @app.get("/files")
 def get_list_of_csvs():
     """Return a list of the current CSV's that can be played"""
-    csv_file_path = Path('/home/pi/github/xmastree2023/examples')
-    csv_files = list(map(str,list(csv_file_path.glob('*.csv'))))
-    return json.dumps(csv_files)
+    data = {"command": "get_list_of_files", "args": ""}
+    json_data = json.dumps(data)
+    response = socket.create_connection((server_url, server_port)).sendall(
+        json_data.encode("utf-8")
+    )
+    return response
 
 
 @app.post("/receivedf")

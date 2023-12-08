@@ -2,23 +2,19 @@ import functools
 import socket
 import json
 import logging
-
-# import colorlog
-# import queue
 import threading
 
-from pyparsing import dict_of
 import board
 import neopixel
 
-# import numpy as np
+
 import pandas as pd
 import time
 import select
 from pathlib import Path
 
-from common_objects import Sequence, setup_common_logger
-import file_parser
+from common_objects import setup_common_logger
+
 
 logger = logging.getLogger("light_driver")
 logger = setup_common_logger(logger)
@@ -34,7 +30,8 @@ fps = 5.0
 stop_event = threading.Event()
 stop_event.clear()
 
-def all_standard_column_names(num:int) -> list[str]:
+
+def all_standard_column_names(num: int) -> list[str]:
     results = []
     for i in range(num):
         results.append(f"R_{i}")
@@ -43,36 +40,12 @@ def all_standard_column_names(num:int) -> list[str]:
     return results
 
 
-column_names = [f"LED_{n}" for n in range(150)]
-
 lock = threading.Lock()
 
+column_names = all_standard_column_names(led_num)
+
 # Create DataFrame filling with black
-current_df_sequence = pd.DataFrame(0, index=range(1), columns=all_standard_column_names(led_num))
-
-
-
-def hex_to_rgb(hex_color: str) -> tuple:
-    """Convert GRB hex color code to RGB tuple."""
-    hex_color = hex_color.lstrip("#")  # Remove '#' if present
-    rgb = tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
-    return rgb
-
-
-def rgb_to_hex(r: int, g: int, b: int) -> str:
-    """Convert RGB values to hex color code."""
-    hex_color = f"#{r:02X}{g:02X}{b:02X}"
-    return hex_color
-
-
-def int_to_hex(int_color: int):
-    """Convert an integer color to a hex string."""
-    return f"#{int_color:06x}"
-
-
-def hex_to_int(hex_color: str):
-    """Convert a hex color string to an integer."""
-    return int(hex_color[1:], 16)
+current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
 
 
 def handle_fill(args):
@@ -92,9 +65,8 @@ def handle_fill(args):
     color_g = int(args[1])
     color_b = int(args[2])
     data = (color_g, color_r, color_b)
-    color = rgb_to_hex(color_g, color_r, color_b)
     with lock:
-        current_df_sequence = pd.DataFrame(color, index=range(1), columns=column_names)
+        current_df_sequence = pd.DataFrame(data, index=range(1), columns=column_names)
 
     logger.getChild("fill").info(f"filling with {color=}")
 
@@ -120,39 +92,34 @@ def handle_file(args):
     # load that into a dataframe
     # check that it has the right size
     # check that each element is a hex code
-
-
+    local_logger = logger.getChild("handle_file")
 
     if type(args) != str:
-        logger.getChild("file").error(f"needed a file path, got {type(args)=}, {args=}")
+        local_logger.error(f"needed a file path, got {type(args)=}, {args=}")
         return
     file_path = Path(args)
     if not file_path.exists():
-        logger.getChild("file").error(f"File dosn't exist. {file_path=}")
+        local_logger.error(f"File dosn't exist. {file_path=}")
         return
 
     results = None
 
     start = time.time()
-    #results = file_parser.get_formatted_df_from_csv(file_path)
     results = pd.read_csv(file_path)
     end = time.time()
-    logger.getChild("file").debug(
-        f"loaded the file to a dataframe and it took {end-start:0.3f}"
-    )
+    local_logger.debug(f"loaded the file to a dataframe and it took {end-start:0.3f}")
 
-
-    logger.getChild("file").debug(
+    local_logger.debug(
         f"loaded the file to a dataframe and it is using {results.memory_usage(deep=True).sum()}b"
     )
-    logger.getChild("file").debug(f"{results}")
+    local_logger.debug(f"{results}")
     with lock:
         current_df_sequence = results
 
 
-
 def handle_add_list(args):
     global current_df_sequence, led_num
+    raise NotImplementedError
     if type(args) == list:
         pass
     else:
@@ -174,8 +141,26 @@ def handle_add_list(args):
     with lock:
         current_df_sequence.loc[current_row] = args
 
+def handle_getting_list_of_files(args, sock: socket.socket) -> None:
+    """Return a list of the current CSV's that can be played"""
+    csv_file_path = Path("/home/pi/github/xmastree2023/examples")
+    csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
 
-def handle_command(command: dict, stop_event: threading.Event) -> None:
+    sock.sendall(json.dumps(csv_files).encode('utf-8'))
+
+def handle_getting_temp(args, sock:socket.socket) -> None:
+    """measure the temperature of the raspberry pi"""
+    import subprocess
+
+    result = subprocess.run(
+        ["vcgencmd", "measure_temp"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    sock.sendall(json.dumps({"temp":result.stdout}).encode('utf-8'))
+
+def handle_command(command: dict, stop_event: threading.Event, sock: socket.socket) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
     target_command = command["command"]
@@ -191,10 +176,15 @@ def handle_command(command: dict, stop_event: threading.Event) -> None:
             # handle_list(command['args'])
             pass
         case "addlist":
-            handle_add_list(command["args"])
+            #handle_add_list(command["args"])
+            pass
         case "loadfile":
             handle_file(command["args"])
             pass
+        case "get_list_of_files":
+            handle_getting_list_of_files(command["args"], sock)
+        case "temp":
+            handle_getting_temp(command["args"], sock)
         case "fps":
             handle_fps(command["args"])
         case "pause":
@@ -217,24 +207,15 @@ def log_when_functions_start_and_stop(func):
 
 
 @log_when_functions_start_and_stop
-def running(stop_event: threading.Event) -> None:
-    while not stop_event.is_set():
-        for index, row in current_df_sequence.iterrows():
-            for pixel_num in range(led_num):
-                color = row[f"LED_{pixel_num}"]
-                pixels[pixel_num] = hex_to_rgb(color)
-            pixels.show()
-            while fps == 0:
-                time.sleep(0.5)
-            time.sleep(1.0 / fps)
-
-
-@log_when_functions_start_and_stop
 def running_with_standard_file(stop_event: threading.Event) -> None:
     while not stop_event.is_set():
         for index, row in current_df_sequence.iterrows():
             for pixel_num in range(led_num):
-                pixels[pixel_num] = (row[f'G_{pixel_num}'],row[f'R_{pixel_num}'],row[f'B_{pixel_num}'])
+                pixels[pixel_num] = (
+                    row[f"G_{pixel_num}"],
+                    row[f"R_{pixel_num}"],
+                    row[f"B_{pixel_num}"],
+                )
             pixels.show()
             while fps == 0:
                 time.sleep(0.5)
@@ -242,12 +223,10 @@ def running_with_standard_file(stop_event: threading.Event) -> None:
                 time.sleep(1.0 / fps)
 
 
-
-
-def handle_received_data(received_data: str, stop_event: threading.Event) -> None:
+def handle_received_data(received_data: str, stop_event: threading.Event, sock: socket.socket) -> None:
     try:
         command = json.loads(received_data)
-        handle_command(command, stop_event)
+        handle_command(command, stop_event, sock)
     except json.JSONDecodeError as JDE:
         logger.warning(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
@@ -281,7 +260,7 @@ def start_server(host: str, port: int, stop_event: threading.Event) -> None:
                     data = sock.recv(10_000)
                     if data:
                         # print(f"Received data: {data.decode()}")
-                        handle_received_data(data.decode("utf-8"), stop_event)
+                        handle_received_data(data.decode("utf-8"), stop_event, sock)
                     else:
                         # No data received, the client has closed the connection
                         local_logger.info(f"Connection closed by {sock.getpeername()}")
@@ -295,19 +274,17 @@ def start_server(host: str, port: int, stop_event: threading.Event) -> None:
 
 
 if __name__ == "__main__":
-    host = "localhost"  # Change this to the desired host address
+    host = "192.168.1.190"  # Change this to the desired host address
     port = 12345  # Change this to the desired port number
     stop_event.clear()
 
-    # start_server(host, port)
-
-    # Create a producer thread
     web_server_thread = threading.Thread(
         target=start_server, args=(host, port, stop_event)
     )
 
-    # Create a consumer thread
-    running_thread = threading.Thread(target=running_with_standard_file, args=(stop_event,))
+    running_thread = threading.Thread(
+        target=running_with_standard_file, args=(stop_event,)
+    )
 
     # Start the threads
     web_server_thread.start()
