@@ -17,7 +17,7 @@ import time
 import select
 from pathlib import Path
 
-from webservers.rpi.common_objects import Sequence, setup_common_logger
+from common_objects import Sequence, setup_common_logger
 import file_parser
 
 logger = logging.getLogger("light_driver")
@@ -34,12 +34,21 @@ fps = 5.0
 stop_event = threading.Event()
 stop_event.clear()
 
+def all_standard_column_names(num:int) -> list[str]:
+    results = []
+    for i in range(num):
+        results.append(f"R_{i}")
+        results.append(f"G_{i}")
+        results.append(f"B_{i}")
+    return results
+
+
 column_names = [f"LED_{n}" for n in range(150)]
 
 lock = threading.Lock()
 
 # Create DataFrame filling with black
-current_df_sequence = pd.DataFrame("#000000", index=range(1), columns=column_names)
+current_df_sequence = pd.DataFrame(0, index=range(1), columns=all_standard_column_names(led_num))
 
 
 
@@ -125,7 +134,8 @@ def handle_file(args):
     results = None
 
     start = time.time()
-    results = file_parser.get_formatted_df_from_csv(file_path)
+    #results = file_parser.get_formatted_df_from_csv(file_path)
+    results = pd.read_csv(file_path)
     end = time.time()
     logger.getChild("file").debug(
         f"loaded the file to a dataframe and it took {end-start:0.3f}"
