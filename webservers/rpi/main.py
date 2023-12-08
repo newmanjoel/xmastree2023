@@ -160,18 +160,10 @@ def handle_getting_temp(args, sock: socket.socket) -> None:
         stderr=subprocess.PIPE,
         text=True,
     )
-    json_string = json.dumps({"temp": result.stdout})
-    try:
-        if not sock.fileno() == -1:
-            # this means the client is still connected
-
-            sock.sendall(json_string.encode("utf-8"))
-        else:
-            # client is not connected, what do I do here?
-            pass
-    except (OSError, IOError) as e:
-        # Handle any exception that may occur during the data transmission
-        print(f"Error while sending data: {e}")
+    json_string = json.dumps({"temp": str(result.stdout)})
+    logger.getChild("temp").info(f"Sending back {json_string}")
+    sock.sendall(json_string.encode("utf-8"))
+    logger.getChild("temp").debug(f"Sent back {json_string}")
 
 
 def handle_command(
