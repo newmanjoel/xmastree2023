@@ -103,6 +103,7 @@ def get_rpi_temp():
 
     return response
 
+
 @app.post("/loadfile")
 def load_csv_file_on_rpi(file_path: Path):
     """Tell the controller what file you want it to load"""
@@ -120,10 +121,12 @@ def get_list_of_csvs():
     """Return a list of the current CSV's that can be played"""
     data = {"command": "get_list_of_files", "args": ""}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
-        json_data.encode("utf-8")
-    )
-    return response
+    with socket.create_connection((server_url, server_port)) as connection_to_rpi:
+        connection_to_rpi.sendall(json_data.encode("utf-8"))
+        json_bytes = connection_to_rpi.recv(10_000)
+        json_text = json.loads(json_bytes.decode("utf-8"))
+
+    return json_text
 
 
 @app.post("/receivedf")
