@@ -218,6 +218,8 @@ def log_when_functions_start_and_stop(func):
 def running_with_standard_file(stop_event: threading.Event) -> None:
     while not stop_event.is_set():
         for index, row in current_df_sequence.iterrows():
+            if stop_event.is_set():
+                break
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (
                     row[f"G_{pixel_num}"],
