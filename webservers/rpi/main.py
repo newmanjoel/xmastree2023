@@ -141,14 +141,16 @@ def handle_add_list(args):
     with lock:
         current_df_sequence.loc[current_row] = args
 
+
 def handle_getting_list_of_files(args, sock: socket.socket) -> None:
     """Return a list of the current CSV's that can be played"""
     csv_file_path = Path("/home/pi/github/xmastree2023/examples")
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
 
-    sock.sendall(json.dumps(csv_files).encode('utf-8'))
+    sock.sendall(json.dumps(csv_files).encode("utf-8"))
 
-def handle_getting_temp(args, sock:socket.socket) -> None:
+
+def handle_getting_temp(args, sock: socket.socket) -> None:
     """measure the temperature of the raspberry pi"""
     import subprocess
 
@@ -158,9 +160,23 @@ def handle_getting_temp(args, sock:socket.socket) -> None:
         stderr=subprocess.PIPE,
         text=True,
     )
-    sock.sendall(json.dumps({"temp":result.stdout}).encode('utf-8'))
+    json_string = json.dumps({"temp": result.stdout})
+    try:
+        if not sock.fileno() == -1:
+            # this means the client is still connected
 
-def handle_command(command: dict, stop_event: threading.Event, sock: socket.socket) -> None:
+            sock.sendall(json_string.encode("utf-8"))
+        else:
+            # client is not connected, what do I do here?
+            pass
+    except (OSError, IOError) as e:
+        # Handle any exception that may occur during the data transmission
+        print(f"Error while sending data: {e}")
+
+
+def handle_command(
+    command: dict, stop_event: threading.Event, sock: socket.socket
+) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
     target_command = command["command"]
@@ -176,7 +192,7 @@ def handle_command(command: dict, stop_event: threading.Event, sock: socket.sock
             # handle_list(command['args'])
             pass
         case "addlist":
-            #handle_add_list(command["args"])
+            # handle_add_list(command["args"])
             pass
         case "loadfile":
             handle_file(command["args"])
@@ -223,7 +239,9 @@ def running_with_standard_file(stop_event: threading.Event) -> None:
                 time.sleep(1.0 / fps)
 
 
-def handle_received_data(received_data: str, stop_event: threading.Event, sock: socket.socket) -> None:
+def handle_received_data(
+    received_data: str, stop_event: threading.Event, sock: socket.socket
+) -> None:
     try:
         command = json.loads(received_data)
         handle_command(command, stop_event, sock)
@@ -245,7 +263,7 @@ def start_server(host: str, port: int, stop_event: threading.Event) -> None:
         connected_clients = []
 
         while not stop_event.is_set():
-            readable, _, _ = select.select(
+            readable, writeable, _ = select.select(
                 [server_socket] + connected_clients, [], [], 0.2
             )
             for sock in readable:
