@@ -16,8 +16,8 @@ from common_objects import setup_common_logger
 logger = logging.getLogger("christmas_lights_web")
 logger = setup_common_logger(logger)
 
-server_url = "192.168.1.190"
-server_port = 12345
+rpi_ip = "192.168.1.192"
+rpi_port = 12345
 
 
 class JsonData(BaseModel):
@@ -38,7 +38,7 @@ def alloff():
     """Turn off all of the lights"""
     data = {"command": "fill", "args": [0, 0, 0]}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
+    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
         json_data.encode("utf-8")
     )
     logger.getChild("all_off").info(f"turning off all the lights")
@@ -49,7 +49,7 @@ def allred(r: int, g: int, b: int):
     """Turn on the RGB lights"""
     data = {"command": "fill", "args": [r, g, b]}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
+    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
         json_data.encode("utf-8")
     )
     logger.getChild("all_red").info(f"turning off all the lights")
@@ -65,7 +65,7 @@ def oneoff(index: int):
 def set_speed(fps: float):
     """set the desired FPS that the sequence will run at. Note that there is an upper limit to this."""
     json_data = json.dumps({"command": "fps", "args": fps})
-    response = socket.create_connection((server_url, server_port)).sendall(
+    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
         json_data.encode("utf-8")
     )
     logger.getChild("speed").info(f"setting the {fps=}")
@@ -84,7 +84,7 @@ def addRandomColor():
         list_to_add.append(random_color)
     data = {"command": "addlist", "args": list_to_add}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
+    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
         json_data.encode("utf-8")
     )
     logger.getChild("addRandomColor").info(
@@ -97,24 +97,31 @@ def get_rpi_temp():
     """measure the temperature of the raspberry pi"""
     data = {"command": "temp", "args": ""}
     json_data = json.dumps(data)
-    with socket.create_connection((server_url, server_port)) as connection_to_rpi:
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
         connection_to_rpi.sendall(json_data.encode("utf-8"))
         json_bytes = connection_to_rpi.recv(10_000)
         json_text = json.loads(json_bytes.decode("utf-8"))
-
     return json_text
 
 
-@app.post("/loadfile")
-def load_csv_file_on_rpi(file_path: Path):
-    """Tell the controller what file you want it to load"""
-    data = {"command": "loadfile", "args": str(file_path)}
+@app.post("/brightness")
+def set_light_brightness(brightness: float):
+    """Set the brightness precentage. Valid numbers between 1 and 100"""
+    data = {"command": "temp", "args": brightness}
     json_data = json.dumps(data)
-    response = socket.create_connection((server_url, server_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        connection_to_rpi.sendall(json_data.encode("utf-8"))
 
-    return response
+
+@app.post("/loadfile")
+def load_csv_file_on_rpi(file_path: str):
+    """Tell the controller what file you want it to load"""
+    data = {"command": "loadfile", "args": file_path}
+    json_data = json.dumps(data)
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        connection_to_rpi.sendall(json_data.encode("utf-8"))
+
+    return None
 
 
 @app.get("/files")
@@ -122,7 +129,7 @@ def get_list_of_csvs():
     """Return a list of the current CSV's that can be played"""
     data = {"command": "get_list_of_files", "args": ""}
     json_data = json.dumps(data)
-    with socket.create_connection((server_url, server_port)) as connection_to_rpi:
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
         connection_to_rpi.sendall(json_data.encode("utf-8"))
         json_bytes = connection_to_rpi.recv(10_000)
         json_text = json.loads(json_bytes.decode("utf-8"))
@@ -183,6 +190,6 @@ async def receive_dataframe(request: Request):
 
 
 if __name__ == "__main__":
-    host = "192.168.1.190"
+    host = "localhost"
     port = 1234
     uvicorn.run(app, host=host, port=port)

@@ -117,6 +117,15 @@ def handle_file(args):
         current_df_sequence = results
 
 
+def handle_brightness(args) -> None:
+    local_logger = logger.getChild("brightness")
+    if type(args) != int and type(args) != float:
+        local_logger.error(f"need a float, got {type(args)=}, {args=}")
+        return
+    brightness = int(args)
+    pixels.setBrightness(brightness)
+
+
 def handle_add_list(args):
     global current_df_sequence, led_num
     raise NotImplementedError
@@ -203,6 +212,42 @@ def handle_command(
             pass
 
 
+def handle_if_command(
+    command: dict, stop_event: threading.Event, sock: socket.socket
+) -> None:
+    # Define the logic to handle different commands
+    logger.debug(f"{command=}")
+    target_command = command["command"]
+    if target_command == "fill":
+        handle_fill(command["args"])
+    elif target_command == "off":
+        handle_fill([0, 0, 0])
+    elif target_command == "single":
+        # handle_one(command['args'])
+        pass
+    elif target_command == "list":
+        # handle_list(command['args'])
+        pass
+    elif target_command == "addlist":
+        # handle_add_list(command["args"])
+        pass
+    elif target_command == "loadfile":
+        handle_file(command["args"])
+        pass
+    elif target_command == "brightness":
+        handle_brightness(command["args"])
+    elif target_command == "get_list_of_files":
+        handle_getting_list_of_files(command["args"], sock)
+    elif target_command == "temp":
+        handle_getting_temp(command["args"], sock)
+    elif target_command == "fps":
+        handle_fps(command["args"])
+    elif target_command == "pause":
+        handle_fps(0)
+    elif target_command == "stop":
+        stop_event.set()
+
+
 def log_when_functions_start_and_stop(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -238,7 +283,7 @@ def handle_received_data(
 ) -> None:
     try:
         command = json.loads(received_data)
-        handle_command(command, stop_event, sock)
+        handle_if_command(command, stop_event, sock)
     except json.JSONDecodeError as JDE:
         logger.warning(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
