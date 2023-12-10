@@ -55,7 +55,6 @@ shared_queue.put(current_df_sequence)
 
 def handle_fill(args, queue: queue.Queue):
     # converts RGB into a GRB hex
-    global current_df_sequence
     if type(args) != list:
         logger.getChild("fill").error(
             f"trying to fill with something that is not a list {type(args)=}\n{args=}"
@@ -72,6 +71,7 @@ def handle_fill(args, queue: queue.Queue):
     data = [color_g, color_r, color_b] * led_num
     with lock:
         current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
+        queue.put(current_df_sequence)
 
 
 def handle_fps(args):
@@ -90,7 +90,6 @@ def handle_fps(args):
 
 
 def handle_file(args, queue: queue.Queue):
-    global current_df_sequence
     # load a csv file
     # load that into a dataframe
     # check that it has the right size
@@ -118,6 +117,7 @@ def handle_file(args, queue: queue.Queue):
     local_logger.debug(f"{results}")
     with lock:
         current_df_sequence = results
+        queue.put(current_df_sequence)
 
 
 def handle_brightness(args) -> None:
@@ -152,6 +152,7 @@ def handle_add_list(args, queue: queue.Queue):
 
     with lock:
         current_df_sequence.loc[current_row] = args
+        queue.put(current_df_sequence)
 
 
 def handle_getting_list_of_files(args, sock: socket.socket) -> None:
@@ -173,7 +174,6 @@ def handle_getting_temp(args, sock: socket.socket) -> None:
         text=True,
     )
     json_string = json.dumps({"temp": str(result.stdout)})
-    logger.getChild("temp").info(f"Sending back {json_string}")
     sock.sendall(json_string.encode("utf-8"))
     logger.getChild("temp").debug(f"Sent back {json_string}")
 
