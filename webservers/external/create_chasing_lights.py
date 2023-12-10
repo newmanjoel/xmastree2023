@@ -35,7 +35,7 @@ for i in range(led_num):
     )
     # current_df_sequence.loc[i] = working_array
 
-current_df_sequence["FRAME_ID"] = list(range(led_num))
+current_df_sequence.index.name = "FRAME_ID"
 
 current_df_sequence.to_csv(
     Path(
