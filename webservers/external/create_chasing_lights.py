@@ -35,6 +35,8 @@ for i in range(led_num):
     )
     # current_df_sequence.loc[i] = working_array
 
+current_df_sequence["FRAME_ID"] = list(range(led_num))
+
 current_df_sequence.to_csv(
     Path(
         r"C:\Users\joell\OneDrive\Documents\GitHub\xmastree2023\examples\chasing_lights.csv"
