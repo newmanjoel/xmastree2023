@@ -264,13 +264,15 @@ def log_when_functions_start_and_stop(func):
 
 @log_when_functions_start_and_stop
 def running_with_standard_file(stop_event: threading.Event, queue: queue.Queue) -> None:
+    local_logger = logger.getChild("running")
     working_df = current_df_sequence
     while not stop_event.is_set():
-        if queue.not_empty:
-            working_df = queue.get(block=False)
+        if not queue.empty():
+            working_df = queue.get()
+            local_logger.info("Changing to new df")
 
         for index, row in working_df.iterrows():
-            if stop_event.is_set() or queue.not_empty:
+            if stop_event.is_set() or not queue.empty():
                 break
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (
