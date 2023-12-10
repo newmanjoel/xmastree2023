@@ -3,6 +3,7 @@ import socket
 import json
 import logging
 import threading
+import queue
 
 import board
 import neopixel
@@ -30,6 +31,8 @@ fps = 5.0
 stop_event = threading.Event()
 stop_event.clear()
 
+shared_queue = queue.Queue()
+
 
 def all_standard_column_names(num: int) -> list[str]:
     results = []
@@ -47,8 +50,10 @@ column_names = all_standard_column_names(led_num)
 # Create DataFrame filling with black
 current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
 
+shared_queue.put(current_df_sequence)
 
-def handle_fill(args):
+
+def handle_fill(args, queue: queue.Queue):
     # converts RGB into a GRB hex
     global current_df_sequence
     if type(args) != list:
@@ -64,11 +69,9 @@ def handle_fill(args):
     color_r = int(args[0])
     color_g = int(args[1])
     color_b = int(args[2])
-    data = (color_g, color_r, color_b)
+    data = [color_g, color_r, color_b] * led_num
     with lock:
-        current_df_sequence = pd.DataFrame(data, index=range(1), columns=column_names)
-
-    logger.getChild("fill").info(f"filling with {color=}")
+        current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
 
 
 def handle_fps(args):
@@ -86,7 +89,7 @@ def handle_fps(args):
         )
 
 
-def handle_file(args):
+def handle_file(args, queue: queue.Queue):
     global current_df_sequence
     # load a csv file
     # load that into a dataframe
@@ -126,7 +129,7 @@ def handle_brightness(args) -> None:
     pixels.setBrightness(brightness)
 
 
-def handle_add_list(args):
+def handle_add_list(args, queue: queue.Queue):
     global current_df_sequence, led_num
     raise NotImplementedError
     if type(args) == list:
@@ -176,16 +179,16 @@ def handle_getting_temp(args, sock: socket.socket) -> None:
 
 
 def handle_command(
-    command: dict, stop_event: threading.Event, sock: socket.socket
+    command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
 ) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
     target_command = command["command"]
     match target_command:
         case "fill":
-            handle_fill(command["args"])
+            handle_fill(command["args"], queue)
         case "off":
-            handle_fill([0, 0, 0])
+            handle_fill([0, 0, 0], queue)
         case "single":
             # handle_one(command['args'])
             pass
@@ -196,7 +199,7 @@ def handle_command(
             # handle_add_list(command["args"])
             pass
         case "loadfile":
-            handle_file(command["args"])
+            handle_file(command["args"], queue)
             pass
         case "get_list_of_files":
             handle_getting_list_of_files(command["args"], sock)
@@ -213,15 +216,15 @@ def handle_command(
 
 
 def handle_if_command(
-    command: dict, stop_event: threading.Event, sock: socket.socket
+    command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
 ) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
     target_command = command["command"]
     if target_command == "fill":
-        handle_fill(command["args"])
+        handle_fill(command["args"], queue)
     elif target_command == "off":
-        handle_fill([0, 0, 0])
+        handle_fill([0, 0, 0], queue)
     elif target_command == "single":
         # handle_one(command['args'])
         pass
@@ -232,7 +235,7 @@ def handle_if_command(
         # handle_add_list(command["args"])
         pass
     elif target_command == "loadfile":
-        handle_file(command["args"])
+        handle_file(command["args"], queue)
         pass
     elif target_command == "brightness":
         handle_brightness(command["args"])
@@ -260,10 +263,14 @@ def log_when_functions_start_and_stop(func):
 
 
 @log_when_functions_start_and_stop
-def running_with_standard_file(stop_event: threading.Event) -> None:
+def running_with_standard_file(stop_event: threading.Event, queue: queue.Queue) -> None:
+    working_df = current_df_sequence
     while not stop_event.is_set():
-        for index, row in current_df_sequence.iterrows():
-            if stop_event.is_set():
+        if queue.not_empty:
+            working_df = queue.get(block=False)
+
+        for index, row in working_df.iterrows():
+            if stop_event.is_set() or queue.not_empty:
                 break
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (
@@ -271,9 +278,7 @@ def running_with_standard_file(stop_event: threading.Event) -> None:
                     row[f"R_{pixel_num}"],
                     row[f"B_{pixel_num}"],
                 )
-                if pixel_num % 300 == 0 and pixel_num > 1:
-                    pixels.show()
-                pixels.show()
+            pixels.show()
             while fps == 0:
                 time.sleep(0.5)
             else:
@@ -281,11 +286,14 @@ def running_with_standard_file(stop_event: threading.Event) -> None:
 
 
 def handle_received_data(
-    received_data: str, stop_event: threading.Event, sock: socket.socket
+    received_data: str,
+    stop_event: threading.Event,
+    sock: socket.socket,
+    queue: queue.Queue,
 ) -> None:
     try:
         command = json.loads(received_data)
-        handle_if_command(command, stop_event, sock)
+        handle_if_command(command, stop_event, sock, queue)
     except json.JSONDecodeError as JDE:
         logger.warning(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
@@ -293,7 +301,9 @@ def handle_received_data(
 
 
 @log_when_functions_start_and_stop
-def start_server(host: str, port: int, stop_event: threading.Event) -> None:
+def start_server(
+    host: str, port: int, stop_event: threading.Event, queue: queue.Queue
+) -> None:
     local_logger = logger.getChild("webserver")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
@@ -319,7 +329,9 @@ def start_server(host: str, port: int, stop_event: threading.Event) -> None:
                     data = sock.recv(10_000)
                     if data:
                         # print(f"Received data: {data.decode()}")
-                        handle_received_data(data.decode("utf-8"), stop_event, sock)
+                        handle_received_data(
+                            data.decode("utf-8"), stop_event, sock, queue
+                        )
                     else:
                         # No data received, the client has closed the connection
                         local_logger.info(f"Connection closed by {sock.getpeername()}")
@@ -338,11 +350,11 @@ if __name__ == "__main__":
     stop_event.clear()
 
     web_server_thread = threading.Thread(
-        target=start_server, args=(host, port, stop_event)
+        target=start_server, args=(host, port, stop_event, shared_queue)
     )
 
     running_thread = threading.Thread(
-        target=running_with_standard_file, args=(stop_event,)
+        target=running_with_standard_file, args=(stop_event, shared_queue)
     )
 
     # Start the threads
