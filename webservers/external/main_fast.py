@@ -107,7 +107,7 @@ def get_rpi_temp():
 @app.post("/brightness")
 def set_light_brightness(brightness: float):
     """Set the brightness precentage. Valid numbers between 1 and 100"""
-    data = {"command": "temp", "args": brightness}
+    data = {"command": "brightness", "args": brightness}
     json_data = json.dumps(data)
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
         connection_to_rpi.sendall(json_data.encode("utf-8"))

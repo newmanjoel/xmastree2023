@@ -21,7 +21,7 @@ logger = setup_common_logger(logger)
 
 
 # set up global variables that will be shared accros the threads
-led_num = 150
+led_num = 300
 pixels = neopixel.NeoPixel(board.D10, led_num, auto_write=False)
 pixels.fill((100, 100, 100))
 pixels.show()
@@ -271,7 +271,9 @@ def running_with_standard_file(stop_event: threading.Event) -> None:
                     row[f"R_{pixel_num}"],
                     row[f"B_{pixel_num}"],
                 )
-            pixels.show()
+                if pixel_num % 300 == 0 and pixel_num > 1:
+                    pixels.show()
+                pixels.show()
             while fps == 0:
                 time.sleep(0.5)
             else:
@@ -331,7 +333,7 @@ def start_server(host: str, port: int, stop_event: threading.Event) -> None:
 
 
 if __name__ == "__main__":
-    host = "192.168.1.190"  # Change this to the desired host address
+    host = "192.168.1.192"  # Change this to the desired host address
     port = 12345  # Change this to the desired port number
     stop_event.clear()
 
