@@ -74,6 +74,33 @@ def handle_fill(args, queue: queue.Queue):
         queue.put(current_df_sequence)
 
 
+def handle_one(args, queue: queue.Queue):
+    # converts RGB into a GRB hex
+    if type(args) != list:
+        logger.getChild("fill").error(
+            f"trying to fill with something that is not a list {type(args)=}\n{args=}"
+        )
+        return
+    if len(args) != 3:
+        logger.getChild("fill").error(
+            f"trying to fill with more than 3 elements {len(args)=}\n{args=}"
+        )
+        return
+    index = int(args[0])
+    color_r = int(args[1])
+    color_g = int(args[2])
+    color_b = int(args[3])
+
+    data = [0, 0, 0] * led_num
+    data[index] = color_r
+    data[index + 1] = color_g
+    data[index + 2] = color_b
+
+    with lock:
+        current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
+        queue.put(current_df_sequence)
+
+
 def handle_fps(args):
     global fps
     try:
@@ -125,11 +152,11 @@ def handle_brightness(args) -> None:
     if type(args) != int and type(args) != float:
         local_logger.error(f"need a float, got {type(args)=}, {args=}")
         return
-    brightness = int(args)
-    pixels.setBrightness(brightness)
+    brightness = float(args)
+    pixels.brightness = brightness
 
 
-def handle_add_list(args, queue: queue.Queue):
+def handle_add_list(args, queue: queue.Queue) -> None:
     global current_df_sequence, led_num
     raise NotImplementedError
     if type(args) == list:
@@ -155,6 +182,18 @@ def handle_add_list(args, queue: queue.Queue):
         queue.put(current_df_sequence)
 
 
+def handle_show_df(args, queue: queue.Queue) -> None:
+    # assuming that the data was created using the .to_json(orient='split') function
+    try:
+        current_df_sequence = pd.read_json(args, orient="split")
+
+        # current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
+        with lock:
+            queue.put(current_df_sequence)
+    except Exception as e:
+        logger.getChild("show_df").error(f"got exception {e=}")
+
+
 def handle_getting_list_of_files(args, sock: socket.socket) -> None:
     """Return a list of the current CSV's that can be played"""
     csv_file_path = Path("/home/pi/github/xmastree2023/examples")
@@ -178,43 +217,6 @@ def handle_getting_temp(args, sock: socket.socket) -> None:
     logger.getChild("temp").debug(f"Sent back {json_string}")
 
 
-def handle_command(
-    command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
-) -> None:
-    # Define the logic to handle different commands
-    logger.debug(f"{command=}")
-    target_command = command["command"]
-    match target_command:
-        case "fill":
-            handle_fill(command["args"], queue)
-        case "off":
-            handle_fill([0, 0, 0], queue)
-        case "single":
-            # handle_one(command['args'])
-            pass
-        case "list":
-            # handle_list(command['args'])
-            pass
-        case "addlist":
-            # handle_add_list(command["args"])
-            pass
-        case "loadfile":
-            handle_file(command["args"], queue)
-            pass
-        case "get_list_of_files":
-            handle_getting_list_of_files(command["args"], sock)
-        case "temp":
-            handle_getting_temp(command["args"], sock)
-        case "fps":
-            handle_fps(command["args"])
-        case "pause":
-            handle_fps(0)
-        case "stop":
-            stop_event.set()
-        case _:
-            pass
-
-
 def handle_if_command(
     command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
 ) -> None:
@@ -226,7 +228,7 @@ def handle_if_command(
     elif target_command == "off":
         handle_fill([0, 0, 0], queue)
     elif target_command == "single":
-        # handle_one(command['args'])
+        handle_one(command["args"], queue)
         pass
     elif target_command == "list":
         # handle_list(command['args'])
@@ -234,6 +236,8 @@ def handle_if_command(
     elif target_command == "addlist":
         # handle_add_list(command["args"])
         pass
+    elif target_command == "show_df":
+        handle_show_df(command["args"], queue)
     elif target_command == "loadfile":
         handle_file(command["args"], queue)
         pass
@@ -263,16 +267,21 @@ def log_when_functions_start_and_stop(func):
 
 
 @log_when_functions_start_and_stop
-def running_with_standard_file(stop_event: threading.Event, queue: queue.Queue) -> None:
+def running_with_standard_file(
+    stop_event: threading.Event, working_queue: queue.Queue
+) -> None:
     local_logger = logger.getChild("running")
     working_df = current_df_sequence
     while not stop_event.is_set():
-        if not queue.empty():
-            working_df = queue.get()
-            local_logger.info("Changing to new df")
+        if not working_queue.empty():
+            try:
+                working_df = working_queue.get()
+                local_logger.info("Changing to new df")
+            except queue.Empty as e:
+                pass
 
         for index, row in working_df.iterrows():
-            if stop_event.is_set() or not queue.empty():
+            if stop_event.is_set() or not working_queue.empty():
                 break
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (

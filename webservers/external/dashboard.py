@@ -6,7 +6,8 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import common_objects as co
-import file_parser as fp
+
+# import file_parser as fp
 
 
 app = Dash(__name__)
