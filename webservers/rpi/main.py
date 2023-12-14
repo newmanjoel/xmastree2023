@@ -182,10 +182,20 @@ def handle_add_list(args, queue: queue.Queue) -> None:
         queue.put(current_df_sequence)
 
 
-def handle_show_df(args, queue: queue.Queue) -> None:
+def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_dict(orient='split') function
     try:
-        current_df_sequence = pd.DataFrame(args["data"], columns=args["columns"])
+        recv_buffer_size = int(args)
+        logger.getChild("show_df").debug(f"{recv_buffer_size=}")
+        sock.sendall(json.dumps({"buffer_size": recv_buffer_size}).encode("utf-8"))
+        raw_bytes = sock.recv(recv_buffer_size)
+        decoded_bytes = raw_bytes.decode("utf-8")
+        logger.getChild("show_df").debug(f"{decoded_bytes=}")
+        json_data = json.loads(decoded_bytes)
+        logger.getChild("show_df").debug(f"{json_data=}")
+        current_df_sequence = pd.DataFrame(
+            json_data["data"], columns=json_data["columns"]
+        )
 
         # current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
         with lock:
@@ -237,7 +247,7 @@ def handle_if_command(
         # handle_add_list(command["args"])
         pass
     elif target_command == "show_df":
-        handle_show_df(command["args"], queue)
+        handle_show_df(command["args"], sock, queue)
     elif target_command == "loadfile":
         handle_file(command["args"], queue)
         pass

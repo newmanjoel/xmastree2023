@@ -112,9 +112,13 @@ def update_webserver_to_show_point(point: Point, plane: Plane):
 
     df_data = current_df_sequence.to_dict(orient="split")
 
-    data = {"command": "show_df", "args": df_data}
-    json_data = json.dumps(data)
+    json_data = json.dumps(df_data)
+    data_size = len(json_data)
+    data = {"command": "show_df", "args": data_size}
+
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
+        make_sure_its_ready = connection_to_rpi.recv(1024)
         connection_to_rpi.sendall(json_data.encode("utf-8"))
 
 
