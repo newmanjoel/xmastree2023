@@ -185,7 +185,8 @@ def handle_add_list(args, queue: queue.Queue) -> None:
 def handle_show_df(args, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_json(orient='split') function
     try:
-        current_df_sequence = pd.read_json(args, orient="split")
+        decoded_data = args.decode("utf-8")
+        current_df_sequence = pd.read_json(decoded_data, orient="split")
 
         # current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
         with lock:
