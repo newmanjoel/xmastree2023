@@ -2,6 +2,7 @@ import enum
 import json
 from pathlib import Path
 import socket
+import time
 import pandas as pd
 import pynput
 from pynput import keyboard
@@ -114,12 +115,10 @@ def update_webserver_to_show_point(point: Point, plane: Plane):
 
     json_data = json.dumps(df_data)
     data_size = len(json_data)
-    data = {"command": "show_df", "args": data_size}
+    data = {"command": "show_df", "args": df_data}
 
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
         connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
-        make_sure_its_ready = connection_to_rpi.recv(1024)
-        connection_to_rpi.sendall(json_data.encode("utf-8"))
 
 
 def move_thing(

@@ -185,17 +185,15 @@ def handle_add_list(args, queue: queue.Queue) -> None:
 def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_dict(orient='split') function
     try:
-        recv_buffer_size = int(args)
-        logger.getChild("show_df").debug(f"{recv_buffer_size=}")
-        sock.sendall(json.dumps({"buffer_size": recv_buffer_size}).encode("utf-8"))
-        raw_bytes = sock.recv(recv_buffer_size)
-        decoded_bytes = raw_bytes.decode("utf-8")
-        logger.getChild("show_df").debug(f"{decoded_bytes=}")
-        json_data = json.loads(decoded_bytes)
-        logger.getChild("show_df").debug(f"{json_data=}")
-        current_df_sequence = pd.DataFrame(
-            json_data["data"], columns=json_data["columns"]
-        )
+        # recv_buffer_size = int(args)
+        # logger.getChild("show_df").debug(f"{recv_buffer_size=}")
+        # sock.sendall(json.dumps({"buffer_size": recv_buffer_size}).encode("utf-8"))
+        # raw_bytes = sock.recv(recv_buffer_size)
+        # decoded_bytes = raw_bytes.decode("utf-8")
+        # logger.getChild("show_df").debug(f"{decoded_bytes=}")
+        # json_data = json.loads(args)
+        # logger.getChild("show_df").debug(f"{json_data=}")
+        current_df_sequence = pd.DataFrame(args["data"], columns=args["columns"])
 
         # current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
         with lock:
@@ -347,7 +345,7 @@ def start_server(
                     connected_clients.append(client_socket)
                 else:
                     # Data received from an existing client
-                    data = sock.recv(10_000)
+                    data = sock.recv(100_000)
                     if data:
                         # print(f"Received data: {data.decode()}")
                         handle_received_data(
