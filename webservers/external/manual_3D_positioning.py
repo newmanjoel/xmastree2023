@@ -1,3 +1,4 @@
+import base64
 import enum
 import json
 from pathlib import Path
@@ -9,8 +10,19 @@ from pynput import keyboard
 from dataclasses import dataclass
 import csv
 
+import os
+import sys
+
+# Add the root directory to the Python path
+current_directory = os.path.dirname(os.path.abspath(__file__))
+webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
+sys.path.append(webservers_directory)
+
+from common.common_send_recv import send_message, receive_message
+
 amount = 0.1
-rpi_port, rpi_ip = (12345, "192.168.1.192")
+# rpi_port, rpi_ip = (12345, "192.168.1.192")
+rpi_port, rpi_ip = (12345, "localhost")
 
 
 class direction_enum(enum.Enum):
@@ -102,7 +114,17 @@ def all_standard_column_names(num: int) -> list[str]:
 column_names = all_standard_column_names(light_num)
 
 
-def update_webserver_to_show_point(point: Point, plane: Plane):
+def send_dict_to_rpi(message: dict) -> None:
+    json_data = json.dumps(message)
+    send_one_message_to_rpi(json_data.encode("utf-8"))
+
+
+def send_one_message_to_rpi(message: bytes) -> None:
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, message)
+
+
+def update_webserver_to_show_point(point: Point, plane: Plane, point_moved:bool = True, plane_moved:bool=True):
     # set all points on the plane to be red
     # set the specific point to be green
     # set all other points to be black
@@ -111,14 +133,15 @@ def update_webserver_to_show_point(point: Point, plane: Plane):
     current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
     current_df_sequence[f"R_{point.index}"] = 255
 
-    df_data = current_df_sequence.to_dict(orient="split")
+    df_data = current_df_sequence.to_json(orient="split")
 
-    json_data = json.dumps(df_data)
-    data_size = len(json_data)
-    data = {"command": "show_df", "args": df_data}
+    data: dict = {"command": "show_df", "args": df_data}
 
-    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
+    send_dict_to_rpi(data)
+
+    # with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+    #     connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
+    #     connection_to_rpi.sendall(b64bytes)
 
 
 def move_thing(
@@ -175,6 +198,8 @@ def on_press(key) -> bool:
             working_point = all_points[(working_point.index - 1) % light_num]
         case "']'":
             working_point = all_points[(working_point.index + 1) % light_num]
+        case "f":
+            pass
         case "Key.esc":
             return False
         case _:
@@ -188,6 +213,6 @@ def on_release(key):
     print("=< %s" % key)
 
 
-with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:
+with keyboard.Listener(on_press=on_press, on_release=on_release) as listener: # type: ignore
     print("Press esc to exit")
     listener.join()

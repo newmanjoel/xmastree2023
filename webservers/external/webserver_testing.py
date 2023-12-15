@@ -5,9 +5,6 @@ import logging
 import threading
 import queue
 
-import board
-import neopixel
-
 
 import pandas as pd
 import time
@@ -24,7 +21,7 @@ webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 from common.common_send_recv import send_message, receive_message
-from common.common_objects import setup_common_logger, all_standard_column_names
+from common.common_objects import setup_common_logger
 
 
 logger = logging.getLogger("light_driver")
@@ -33,15 +30,21 @@ logger = setup_common_logger(logger)
 
 # set up global variables that will be shared accros the threads
 led_num = 500
-pixels = neopixel.NeoPixel(board.D12, led_num, auto_write=False)
-pixels.fill((100, 100, 100))
-pixels.show()
 
 fps = 5.0
 stop_event = threading.Event()
 stop_event.clear()
 
 shared_queue = queue.Queue()
+
+
+def all_standard_column_names(num: int) -> list[str]:
+    results = []
+    for i in range(num):
+        results.append(f"R_{i}")
+        results.append(f"G_{i}")
+        results.append(f"B_{i}")
+    return results
 
 
 lock = threading.Lock()
@@ -142,6 +145,7 @@ def handle_file(args, queue: queue.Queue):
     local_logger.debug(
         f"loaded the file to a dataframe and it is using {results.memory_usage(deep=True).sum()}b"
     )
+    local_logger.debug(f"{results}")
     with lock:
         current_df_sequence = results
         queue.put(current_df_sequence)
@@ -153,7 +157,7 @@ def handle_brightness(args) -> None:
         local_logger.error(f"need a float, got {type(args)=}, {args=}")
         return
     brightness = float(args)
-    pixels.brightness = brightness
+    local_logger.info(f"{brightness=}")
 
 
 def handle_add_list(args, queue: queue.Queue) -> None:
@@ -182,7 +186,7 @@ def handle_add_list(args, queue: queue.Queue) -> None:
         queue.put(current_df_sequence)
 
 
-def handle_show_df(args, queue: queue.Queue) -> None:
+def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_json(orient='split') function
     local_logger = logger.getChild("show_df")
     try:
@@ -236,7 +240,7 @@ def handle_if_command(
         # handle_add_list(command["args"])
         pass
     elif target_command == "show_df":
-        handle_show_df(command["args"], queue)
+        handle_show_df(command["args"], sock, queue)
     elif target_command == "loadfile":
         handle_file(command["args"], queue)
         pass
@@ -283,12 +287,13 @@ def running_with_standard_file(
             if stop_event.is_set() or not working_queue.empty():
                 break
             for pixel_num in range(led_num):
-                pixels[pixel_num] = (
-                    row[f"G_{pixel_num}"],
-                    row[f"R_{pixel_num}"],
-                    row[f"B_{pixel_num}"],
-                )
-            pixels.show()
+                # pixels[pixel_num] = (
+                #     row[f"G_{pixel_num}"],
+                #     row[f"R_{pixel_num}"],
+                #     row[f"B_{pixel_num}"],
+                # )
+                pass
+            # pixels.show()
             while fps == 0:
                 time.sleep(0.5)
             else:
@@ -317,7 +322,7 @@ def start_server(
     local_logger = logger.getChild("webserver")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        server_socket.setblocking(0)
+        server_socket.setblocking(0)  # type: ignore
         server_socket.bind((host, port))
         server_socket.listen(5)
 
@@ -336,11 +341,12 @@ def start_server(
                     connected_clients.append(client_socket)
                 else:
                     # Data received from an existing client
-                    data = receive_message(sock)
-                    if data:
+                    received_data = receive_message(sock)
+                    # data = sock.recv(100_000)
+                    if received_data:
                         # print(f"Received data: {data.decode()}")
                         handle_received_data(
-                            data.decode("utf-8"), stop_event, sock, queue
+                            received_data.decode("utf-8"), stop_event, sock, queue
                         )
                     else:
                         # No data received, the client has closed the connection
@@ -355,7 +361,7 @@ def start_server(
 
 
 if __name__ == "__main__":
-    host = socket.gethostbyname(socket.gethostname())
+    host = "localhost"  # Change this to the desired host address
     port = 12345  # Change this to the desired port number
     stop_event.clear()
 
@@ -373,7 +379,7 @@ if __name__ == "__main__":
 
     try:
         while True:
-            time.sleep(120)
+            time.sleep(60)
             logger.getChild("main_loop").info("press ctrl+c to stop")
     except KeyboardInterrupt:
         stop_event.set()

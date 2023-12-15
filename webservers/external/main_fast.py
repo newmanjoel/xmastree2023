@@ -11,7 +11,17 @@ import json
 from pathlib import Path
 import random
 
-from common_objects import setup_common_logger
+
+import os
+import sys
+
+# Add the root directory to the Python path
+current_directory = os.path.dirname(os.path.abspath(__file__))
+webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
+sys.path.append(webservers_directory)
+
+from common.common_send_recv import send_message, receive_message
+from common.common_objects import setup_common_logger
 
 logger = logging.getLogger("christmas_lights_web")
 logger = setup_common_logger(logger)
@@ -31,6 +41,24 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
     """Convert RGB values to hex color code."""
     hex_color = f"#{r:02X}{g:02X}{b:02X}"
     return hex_color
+
+
+def send_dict_to_rpi(message: dict) -> None:
+    json_data = json.dumps(message)
+    send_one_message_to_rpi(json_data.encode("utf-8"))
+
+
+def send_one_message_to_rpi(message: bytes) -> None:
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, message)
+
+
+def send_and_receive_one_message_to_rpi(message: bytes) -> bytes:
+    received_message = b""
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, message)
+        received_message = receive_message(connection_to_rpi)
+    return received_message
 
 
 @app.post("/alloff")

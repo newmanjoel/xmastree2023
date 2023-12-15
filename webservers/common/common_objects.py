@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 import functools
-from itertools import starmap
-import itertools
 from pathlib import Path
 import pandas as pd
 from pyparsing import col
@@ -13,10 +11,13 @@ import time
 
 def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     import colorlog
+
     # logger = logging.getLogger("light_driver")
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     color_formatter = colorlog.ColoredFormatter(
-        "%(log_color)s%(asctime)s - %(levelname)s - %(message)s",
+        "%(log_color)s%(asctime)s %(name)s - %(levelname)s - %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
         log_colors={
             "DEBUG": "cyan",
@@ -31,6 +32,7 @@ def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     logger.addHandler(console_handler)
     logger.setLevel(logging.DEBUG)
     return logger
+
 
 @dataclass
 class Color:
@@ -79,6 +81,16 @@ class Led:
 @lru_cache(maxsize=2)
 def create_led_names(led_num: int) -> list[str]:
     return [f"LED_{LED_NUMBER}" for LED_NUMBER in range(led_num)]
+
+
+@lru_cache(maxsize=2)
+def all_standard_column_names(num: int) -> list[str]:
+    results = []
+    for i in range(num):
+        results.append(f"R_{i}")
+        results.append(f"G_{i}")
+        results.append(f"B_{i}")
+    return results
 
 
 @dataclass
