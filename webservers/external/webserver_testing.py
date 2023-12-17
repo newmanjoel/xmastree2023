@@ -21,7 +21,7 @@ webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 from common.common_send_recv import send_message, receive_message
-from common.common_objects import setup_common_logger
+from common.common_objects import setup_common_logger, all_standard_column_names
 
 
 logger = logging.getLogger("light_driver")
@@ -36,15 +36,6 @@ stop_event = threading.Event()
 stop_event.clear()
 
 shared_queue = queue.Queue()
-
-
-def all_standard_column_names(num: int) -> list[str]:
-    results = []
-    for i in range(num):
-        results.append(f"R_{i}")
-        results.append(f"G_{i}")
-        results.append(f"B_{i}")
-    return results
 
 
 lock = threading.Lock()
@@ -199,7 +190,9 @@ def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
 
 def handle_getting_list_of_files(args, sock: socket.socket) -> None:
     """Return a list of the current CSV's that can be played"""
-    csv_file_path = Path("/home/pi/github/xmastree2023/examples")
+    csv_file_path = Path(
+        r"C:\Users\joell\OneDrive\Documents\GitHub\xmastree2023\examples"
+    )
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
 
     send_message(sock, json.dumps(csv_files).encode("utf-8"))
@@ -225,7 +218,7 @@ def handle_if_command(
 ) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
-    target_command = command["command"]
+    target_command = command.get("command", "error")
     if target_command == "fill":
         handle_fill(command["args"], queue)
     elif target_command == "off":
@@ -256,6 +249,10 @@ def handle_if_command(
         handle_fps(0)
     elif target_command == "stop":
         stop_event.set()
+    elif target_command == "error":
+        logger.getChild("handle_commands").error(
+            f"Caught a dictionary error. The command parameter is invalid. {command=}"
+        )
 
 
 def log_when_functions_start_and_stop(func):
@@ -308,10 +305,17 @@ def handle_received_data(
 ) -> None:
     try:
         command = json.loads(received_data)
+        # logger.getChild("received_data").debug(f"{type(command)=} {command=}")
+        if type(command) == str:
+            raise TypeError
         handle_if_command(command, stop_event, sock, queue)
     except json.JSONDecodeError as JDE:
         logger.warning(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
+        )
+    except TypeError as TE:
+        logger.warning(
+            f"{TE}\n\nInvalid dictionary format. Please provide valid dictionary data.\n{received_data=}"
         )
 
 

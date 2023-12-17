@@ -82,7 +82,7 @@ def handle_one(args, queue: queue.Queue):
             f"trying to fill with something that is not a list {type(args)=}\n{args=}"
         )
         return
-    if len(args) != 3:
+    if len(args) != 4:
         logger.getChild("fill").error(
             f"trying to fill with more than 3 elements {len(args)=}\n{args=}"
         )
@@ -182,7 +182,7 @@ def handle_add_list(args, queue: queue.Queue) -> None:
         queue.put(current_df_sequence)
 
 
-def handle_show_df(args, queue: queue.Queue) -> None:
+def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_json(orient='split') function
     local_logger = logger.getChild("show_df")
     try:
@@ -221,7 +221,7 @@ def handle_if_command(
 ) -> None:
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
-    target_command = command["command"]
+    target_command = command.get("command", "error")
     if target_command == "fill":
         handle_fill(command["args"], queue)
     elif target_command == "off":
@@ -236,7 +236,7 @@ def handle_if_command(
         # handle_add_list(command["args"])
         pass
     elif target_command == "show_df":
-        handle_show_df(command["args"], queue)
+        handle_show_df(command["args"], sock, queue)
     elif target_command == "loadfile":
         handle_file(command["args"], queue)
         pass
@@ -252,6 +252,10 @@ def handle_if_command(
         handle_fps(0)
     elif target_command == "stop":
         stop_event.set()
+    elif target_command == "error":
+        logger.getChild("handle_commands").error(
+            f"Caught a dictionary error. The command parameter is invalid. {command=}"
+        )
 
 
 def log_when_functions_start_and_stop(func):
@@ -303,10 +307,17 @@ def handle_received_data(
 ) -> None:
     try:
         command = json.loads(received_data)
+        # logger.getChild("received_data").debug(f"{type(command)=} {command=}")
+        if type(command) == str:
+            raise TypeError
         handle_if_command(command, stop_event, sock, queue)
     except json.JSONDecodeError as JDE:
-        logger.warning(
+        logger.error(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
+        )
+    except TypeError as TE:
+        logger.error(
+            f"{TE}\n\nInvalid dictionary format. Please provide valid dictionary data.\n{received_data=}"
         )
 
 
@@ -317,14 +328,14 @@ def start_server(
     local_logger = logger.getChild("webserver")
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        server_socket.setblocking(0)
+        server_socket.setblocking(0)  # type: ignore
         server_socket.bind((host, port))
         server_socket.listen(5)
 
         connected_clients = []
 
         while not stop_event.is_set():
-            readable, writeable, _ = select.select(
+            readable, _, _ = select.select(
                 [server_socket] + connected_clients, [], [], 0.2
             )
             for sock in readable:

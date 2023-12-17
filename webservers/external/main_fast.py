@@ -26,7 +26,8 @@ from common.common_objects import setup_common_logger
 logger = logging.getLogger("christmas_lights_web")
 logger = setup_common_logger(logger)
 
-rpi_ip = "192.168.4.205"
+rpi_ip = "localhost"
+# rpi_ip = "192.168.4.205"
 rpi_port = 12345
 
 
@@ -45,7 +46,8 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
 
 def send_dict_to_rpi(message: dict) -> None:
     json_data = json.dumps(message)
-    send_one_message_to_rpi(json_data.encode("utf-8"))
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
 
 
 def send_one_message_to_rpi(message: bytes) -> None:
@@ -66,9 +68,7 @@ def alloff():
     """Turn off all of the lights"""
     data = {"command": "fill", "args": [0, 0, 0]}
     json_data = json.dumps(data)
-    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    send_dict_to_rpi(json_data)
     logger.getChild("all_off").info(f"turning off all the lights")
 
 
@@ -77,9 +77,7 @@ def allred(r: int, g: int, b: int):
     """Turn on the RGB lights"""
     data = {"command": "fill", "args": [r, g, b]}
     json_data = json.dumps(data)
-    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    send_dict_to_rpi(json_data)
     logger.getChild("all_red").info(f"turning off all the lights")
 
 
@@ -92,29 +90,28 @@ def oneoff(index: int):
 @app.post("/speed")
 def set_speed(fps: float):
     """set the desired FPS that the sequence will run at. Note that there is an upper limit to this."""
-    json_data = json.dumps({"command": "fps", "args": fps})
-    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    data = {"command": "fps", "args": fps}
+    send_dict_to_rpi(data)
     logger.getChild("speed").info(f"setting the {fps=}")
 
 
 @app.post("/addRandomColor")
 def addRandomColor():
     """add a random color to the existing sequence"""
+    # TODO: THIS IS BROKEN
     n = 150
     list_to_add = []
-    random_color = rgb_to_hex(
-        random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)
+    random_color = (
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255),
     )
 
     for i in range(n):
         list_to_add.append(random_color)
     data = {"command": "addlist", "args": list_to_add}
-    json_data = json.dumps(data)
-    response = socket.create_connection((rpi_ip, rpi_port)).sendall(
-        json_data.encode("utf-8")
-    )
+    # json_data = json.dumps(data)
+    send_dict_to_rpi(data)
     logger.getChild("addRandomColor").info(
         f"added the color {random_color} to the current sequence"
     )
@@ -126,8 +123,8 @@ def get_rpi_temp():
     data = {"command": "temp", "args": ""}
     json_data = json.dumps(data)
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        connection_to_rpi.sendall(json_data.encode("utf-8"))
-        json_bytes = connection_to_rpi.recv(10_000)
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
+        json_bytes = receive_message(connection_to_rpi)
         json_text = json.loads(json_bytes.decode("utf-8"))
     return json_text
 
@@ -138,7 +135,7 @@ def set_light_brightness(brightness: float):
     data = {"command": "brightness", "args": brightness}
     json_data = json.dumps(data)
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        connection_to_rpi.sendall(json_data.encode("utf-8"))
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
 
 
 @app.post("/loadfile")
@@ -147,7 +144,7 @@ def load_csv_file_on_rpi(file_path: str):
     data = {"command": "loadfile", "args": file_path}
     json_data = json.dumps(data)
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        connection_to_rpi.sendall(json_data.encode("utf-8"))
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
 
     return None
 
@@ -157,9 +154,10 @@ def get_list_of_csvs():
     """Return a list of the current CSV's that can be played"""
     data = {"command": "get_list_of_files", "args": ""}
     json_data = json.dumps(data)
+
     with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        connection_to_rpi.sendall(json_data.encode("utf-8"))
-        json_bytes = connection_to_rpi.recv(10_000)
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
+        json_bytes = receive_message(connection_to_rpi)
         json_text = json.loads(json_bytes.decode("utf-8"))
 
     return json_text
@@ -220,4 +218,6 @@ async def receive_dataframe(request: Request):
 if __name__ == "__main__":
     host = "localhost"
     port = 1234
+    logger = logging.getLogger("main_fast")
+    logger = setup_common_logger(logger)
     uvicorn.run(app, host=host, port=port)
