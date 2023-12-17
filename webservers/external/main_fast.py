@@ -26,7 +26,7 @@ from common.common_objects import setup_common_logger
 logger = logging.getLogger("christmas_lights_web")
 logger = setup_common_logger(logger)
 
-rpi_ip = "192.168.1.192"
+rpi_ip = "192.168.4.205"
 rpi_port = 12345
 
 

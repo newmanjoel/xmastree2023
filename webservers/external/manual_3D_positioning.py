@@ -19,9 +19,10 @@ webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 from common.common_send_recv import send_message, receive_message
+from common.common_objects import all_standard_column_names
 
 amount = 0.1
-# rpi_port, rpi_ip = (12345, "192.168.1.192")
+# rpi_port, rpi_ip = (12345, "192.168.1.205")
 rpi_port, rpi_ip = (12345, "localhost")
 
 
@@ -77,6 +78,7 @@ all_points: list[Point] = []
 gift_file_path = Path(
     r"C:\Users\joell\OneDrive\Documents\GitHub\xmastree2023\coords_2023_test_save.gift"
 )
+working_gift_file_path = Path("test_output.gift")
 
 
 def load_csv_to_dict(file_path: Path) -> dict[int, tuple[float, float, float]]:
@@ -98,17 +100,35 @@ def load_csv_to_dict(file_path: Path) -> dict[int, tuple[float, float, float]]:
     return data_dict
 
 
-dict_of_points = load_csv_to_dict(gift_file_path)
+def load_points_to_csv(file_path: Path, input_points: list[Point]) -> bool:
+    sorted_points = sorted(input_points, key=lambda x: x.index)
+    print(f"{sorted_points=}")
+    data_to_write = []
+    file_path.touch(exist_ok=True)
+    try:
+        with open(file_path, "w", newline="") as csv_file:
+            # Create a CSV writer object
+            csv_writer = csv.writer(csv_file)
+
+            for row_number, working_point in enumerate(input_points):
+                # Point(x, y, z, row_number)
+                # Write each item in the list as a row in the CSV file
+                csv_writer.writerow(
+                    [
+                        f"{working_point.x:.10f}",
+                        f"{working_point.y:.10f}",
+                        f"{working_point.z:.10f}",
+                    ]
+                )
+    except Exception as e:
+        print(f"{e=}")
+        return False
+
+    return True
+
+
+dict_of_points = load_csv_to_dict(working_gift_file_path)
 light_num = len(all_points)
-
-
-def all_standard_column_names(num: int) -> list[str]:
-    results = []
-    for i in range(num):
-        results.append(f"R_{i}")
-        results.append(f"G_{i}")
-        results.append(f"B_{i}")
-    return results
 
 
 column_names = all_standard_column_names(light_num)
@@ -124,20 +144,30 @@ def send_one_message_to_rpi(message: bytes) -> None:
         send_message(connection_to_rpi, message)
 
 
-def update_webserver_to_show_point(point: Point, plane: Plane, point_moved:bool = True, plane_moved:bool=True):
+def update_webserver_to_show_point(
+    point: Point, plane: Plane, point_moved: bool = True, plane_moved: bool = True
+):
     # set all points on the plane to be red
     # set the specific point to be green
     # set all other points to be black
 
     # create the dataframe with all black
-    current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
-    current_df_sequence[f"R_{point.index}"] = 255
+    # current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
+    # current_df_sequence[f"R_{point.index}"] = 255
 
-    df_data = current_df_sequence.to_json(orient="split")
+    # df_data = current_df_sequence.to_json(orient="split")
 
-    data: dict = {"command": "show_df", "args": df_data}
+    data1 = {"command": "off", "args": ""}
+    data2 = {"command": "single", "args": [point.index, 255, 0, 0]}
 
-    send_dict_to_rpi(data)
+    plane_light_indexs = []
+    for test_point in all_points:
+        if (plane.x - test_point.x) <= plane.tolerance:
+            plane_light_indexs.append(test_point.index)
+
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, json.dumps(data1).encode("utf-8"))
+        send_message(connection_to_rpi, json.dumps(data2).encode("utf-8"))
 
     # with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
     #     connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
@@ -202,6 +232,11 @@ def on_press(key) -> bool:
             pass
         case "Key.esc":
             return False
+        case "'\\x13'":
+            print(f"ctrl+s")
+            # save the current coordinates in a gift file
+            load_points_to_csv(Path("test_output.gift"), all_points)
+
         case _:
             pass
     print(f"{working_point=}")
@@ -213,6 +248,6 @@ def on_release(key):
     print("=< %s" % key)
 
 
-with keyboard.Listener(on_press=on_press, on_release=on_release) as listener: # type: ignore
+with keyboard.Listener(on_press=on_press, on_release=on_release) as listener:  # type: ignore
     print("Press esc to exit")
     listener.join()

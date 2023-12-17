@@ -2,17 +2,13 @@ from dataclasses import dataclass
 import functools
 from pathlib import Path
 import pandas as pd
-from pyparsing import col
 import logging
 from functools import lru_cache
-
+import colorlog
 import time
 
 
 def setup_common_logger(logger: logging.Logger) -> logging.Logger:
-    import colorlog
-
-    # logger = logging.getLogger("light_driver")
     formatter = logging.Formatter(
         "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )

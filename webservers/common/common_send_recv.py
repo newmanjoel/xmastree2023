@@ -1,4 +1,5 @@
 import socket
+import time
 
 
 def receive_message(client_socket: socket.socket) -> bytes:
@@ -31,7 +32,14 @@ def send_message(server_socket: socket.socket, message: bytes) -> None:
     # Send the message in chunks
     chunk_size = 4096  # Adjust the chunk size based on your needs
     offset = 0
+    retry_count = 0
     while offset < message_length:
         end_offset = min(offset + chunk_size, message_length)
-        server_socket.sendall(message[offset:end_offset])
-        offset = end_offset
+        try:
+            server_socket.sendall(message[offset:end_offset])
+            offset = end_offset
+        except BlockingIOError:
+            retry_count += 1
+            time.sleep(0.1)
+            if retry_count > 10:
+                raise

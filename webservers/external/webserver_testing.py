@@ -85,7 +85,7 @@ def handle_one(args, queue: queue.Queue):
             f"trying to fill with something that is not a list {type(args)=}\n{args=}"
         )
         return
-    if len(args) != 3:
+    if len(args) != 4:
         logger.getChild("fill").error(
             f"trying to fill with more than 3 elements {len(args)=}\n{args=}"
         )
