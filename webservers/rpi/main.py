@@ -329,9 +329,9 @@ def running_with_standard_file(
             else:
                 time.sleep(sleep_time)
             time4 = time.time()
-            local_logger.debug(
-                f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1)}"
-            )
+            # local_logger.debug(
+            #     f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1):.3f}"
+            # )
 
 
 def handle_received_data(
