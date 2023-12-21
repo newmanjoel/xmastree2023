@@ -286,6 +286,7 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
             )
         results.append(row_list)
     local_logger.debug("ending conversion")
+    # local_logger.debug(f"\n{results}")
     return results
 
 
@@ -311,9 +312,10 @@ def running_with_standard_file(
                 break
             time1 = time.time()
             for pixel_num in range(led_num):
-                local_logger.debug(f"Trying to set id {pixel_num} to {row}")
-                pixels[pixel_num] = (row[0], row[1], row[2])
-                local_logger.debug(f"set id {pixel_num} to {row}")
+                # local_logger.debug(f"Trying to set id {pixel_num} to {row}")
+                color = row[pixel_num]
+                pixels[pixel_num] = (color[0], color[1], color[2])
+                # local_logger.debug(f"set id {pixel_num} to {row}")
             time2 = time.time()
             pixels.show()
             time3 = time.time()
