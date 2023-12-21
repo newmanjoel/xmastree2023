@@ -272,22 +272,22 @@ def log_when_functions_start_and_stop(func):
 def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     local_logger = logger.getChild("c_df_2_l")
     local_logger.debug("starting conversion")
-    results = []
+    df_rows, df_columns = input_df.shape
+    results = [None] * df_rows
     for index, row in input_df.iterrows():
-        row_list = []
+        row_list = [None] * led_num
 
         for pixel_num in range(led_num):
-            row_list.append(
-                (
-                    int(row[f"G_{pixel_num}"]),
-                    int(row[f"R_{pixel_num}"]),
-                    int(row[f"B_{pixel_num}"]),
-                )
+            row_list[pixel_num] = (  # type: ignore
+                row[f"G_{pixel_num}"],
+                row[f"R_{pixel_num}"],
+                row[f"B_{pixel_num}"],
             )
-        results.append(row_list)
+
+        results[index] = row_list  # type: ignore
     local_logger.debug("ending conversion")
     # local_logger.debug(f"\n{results}")
-    return results
+    return results  # type: ignore
 
 
 @log_when_functions_start_and_stop
@@ -330,7 +330,7 @@ def running_with_standard_file(
                 time.sleep(sleep_time)
             time4 = time.time()
             local_logger.debug(
-                f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s"
+                f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1)}"
             )
 
 
