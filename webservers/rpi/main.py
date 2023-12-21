@@ -293,6 +293,7 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
 def running_with_standard_file(
     stop_event: threading.Event, working_queue: queue.Queue
 ) -> None:
+    global pixels, led_num
     local_logger = logger.getChild("running")
     working_df = current_df_sequence
     fast_array = convert_df_to_list_of_tuples(working_df)
@@ -310,7 +311,9 @@ def running_with_standard_file(
                 break
             time1 = time.time()
             for pixel_num in range(led_num):
+                local_logger.debug(f"Trying to set id {pixel_num} to {row}")
                 pixels[pixel_num] = (row[0], row[1], row[2])
+                local_logger.debug(f"set id {pixel_num} to {row}")
             time2 = time.time()
             pixels.show()
             time3 = time.time()
