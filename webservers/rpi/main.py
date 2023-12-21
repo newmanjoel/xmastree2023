@@ -37,7 +37,7 @@ pixels = neopixel.NeoPixel(board.D12, led_num, auto_write=False)
 pixels.fill((100, 100, 100))
 pixels.show()
 
-fps = 5.0
+fps = 10
 stop_event = threading.Event()
 stop_event.clear()
 
@@ -286,17 +286,24 @@ def running_with_standard_file(
         for index, row in working_df.iterrows():
             if stop_event.is_set() or not working_queue.empty():
                 break
+            time1 = time.time()
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (
                     row[f"G_{pixel_num}"],
                     row[f"R_{pixel_num}"],
                     row[f"B_{pixel_num}"],
                 )
+            time2 = time.time()
             pixels.show()
+            time3 = time.time()
             while fps == 0:
                 time.sleep(0.5)
             else:
                 time.sleep(1.0 / fps)
+            time4 = time.time()
+            local_logger.debug(
+                f"Loading Array:{time2-time1}s Pushing Pixels:{time2-time3}s sleeping:{time4-time3}s"
+            )
 
 
 def handle_received_data(
@@ -366,7 +373,7 @@ def start_server(
 
 
 if __name__ == "__main__":
-    host = socket.gethostbyname(socket.gethostname())
+    host = "192.168.4.205"
     port = 12345  # Change this to the desired port number
     stop_event.clear()
 
