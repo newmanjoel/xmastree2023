@@ -269,29 +269,45 @@ def log_when_functions_start_and_stop(func):
     return wrapper
 
 
+def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
+    results = []
+    for index, row in input_df.iterrows():
+        row_list = []
+
+        for pixel_num in range(led_num):
+            row_list.append(
+                (row[f"G_{pixel_num}"], row[f"R_{pixel_num}"], row[f"B_{pixel_num}"])
+            )
+        results.append(row_list)
+
+    return results
+
+
 @log_when_functions_start_and_stop
 def running_with_standard_file(
     stop_event: threading.Event, working_queue: queue.Queue
 ) -> None:
     local_logger = logger.getChild("running")
     working_df = current_df_sequence
+    fast_array = convert_df_to_list_of_tuples(working_df)
     while not stop_event.is_set():
         if not working_queue.empty():
             try:
                 working_df = working_queue.get()
                 local_logger.info("Changing to new df")
+                fast_array = convert_df_to_list_of_tuples(working_df)
             except queue.Empty as e:
                 pass
 
-        for index, row in working_df.iterrows():
+        for row in fast_array:
             if stop_event.is_set() or not working_queue.empty():
                 break
             time1 = time.time()
             for pixel_num in range(led_num):
                 pixels[pixel_num] = (
-                    row[f"G_{pixel_num}"],
-                    row[f"R_{pixel_num}"],
-                    row[f"B_{pixel_num}"],
+                    row[0],
+                    row[1],
+                    row[2],
                 )
             time2 = time.time()
             pixels.show()
@@ -302,7 +318,7 @@ def running_with_standard_file(
                 time.sleep(1.0 / fps)
             time4 = time.time()
             local_logger.debug(
-                f"Loading Array:{time2-time1}s Pushing Pixels:{time2-time3}s sleeping:{time4-time3}s"
+                f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s"
             )
 
 
