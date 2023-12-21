@@ -319,10 +319,15 @@ def running_with_standard_file(
             time2 = time.time()
             pixels.show()
             time3 = time.time()
+            loop_time = time3 - time1
+            fps_time = 1.0 / fps
+            sleep_time = fps_time - loop_time
+            if sleep_time < 0:
+                sleep_time = 0
             while fps == 0:
                 time.sleep(0.5)
             else:
-                time.sleep(1.0 / fps)
+                time.sleep(sleep_time)
             time4 = time.time()
             local_logger.debug(
                 f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s"
