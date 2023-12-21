@@ -270,16 +270,22 @@ def log_when_functions_start_and_stop(func):
 
 
 def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
+    local_logger = logger.getChild("c_df_2_l")
+    local_logger.debug("starting conversion")
     results = []
     for index, row in input_df.iterrows():
         row_list = []
 
         for pixel_num in range(led_num):
             row_list.append(
-                (row[f"G_{pixel_num}"], row[f"R_{pixel_num}"], row[f"B_{pixel_num}"])
+                (
+                    int(row[f"G_{pixel_num}"]),
+                    int(row[f"R_{pixel_num}"]),
+                    int(row[f"B_{pixel_num}"]),
+                )
             )
         results.append(row_list)
-
+    local_logger.debug("ending conversion")
     return results
 
 
@@ -304,11 +310,7 @@ def running_with_standard_file(
                 break
             time1 = time.time()
             for pixel_num in range(led_num):
-                pixels[pixel_num] = (
-                    row[0],
-                    row[1],
-                    row[2],
-                )
+                pixels[pixel_num] = (row[0], row[1], row[2])
             time2 = time.time()
             pixels.show()
             time3 = time.time()
