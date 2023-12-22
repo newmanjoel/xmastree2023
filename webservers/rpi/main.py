@@ -57,7 +57,9 @@ shared_queue.put(current_df_sequence)
 def handle_get_logs(args, sock: socket.socket):
     running_path = Path(".")
     # csv_file_path = Path("/home/pi/github/xmastree2023/examples")
+    running_path.absolute()
     files = list(map(str, list(running_path.glob("*"))))
+    files.append(str(running_path.absolute()))
 
     send_message(sock, json.dumps(files).encode("utf-8"))
 
