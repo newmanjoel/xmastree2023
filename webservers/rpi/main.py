@@ -54,6 +54,14 @@ current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
 shared_queue.put(current_df_sequence)
 
 
+def handle_get_logs(args, sock: socket.socket):
+    running_path = Path(".")
+    # csv_file_path = Path("/home/pi/github/xmastree2023/examples")
+    files = list(map(str, list(running_path.glob("*"))))
+
+    send_message(sock, json.dumps(files).encode("utf-8"))
+
+
 def handle_fill(args, queue: queue.Queue):
     # converts RGB into a GRB hex
     if type(args) != list:
@@ -152,6 +160,9 @@ def handle_brightness(args) -> None:
     if type(args) != int and type(args) != float:
         local_logger.error(f"need a float, got {type(args)=}, {args=}")
         return
+    if float(args) > 1 or float(args) < 0:
+        local_logger.error(f"brightness out of bounds. Needs to be between 0 and 1")
+        return
     brightness = float(args)
     pixels.brightness = brightness
 
@@ -235,6 +246,8 @@ def handle_if_command(
     elif target_command == "addlist":
         # handle_add_list(command["args"])
         pass
+    elif target_command == "get_log":
+        handle_get_logs(command["args"], sock)
     elif target_command == "show_df":
         handle_show_df(command["args"], sock, queue)
     elif target_command == "loadfile":

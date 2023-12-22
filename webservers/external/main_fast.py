@@ -26,8 +26,8 @@ from common.common_objects import setup_common_logger
 logger = logging.getLogger("christmas_lights_web")
 logger = setup_common_logger(logger)
 
-rpi_ip = "localhost"
-# rpi_ip = "192.168.4.205"
+# rpi_ip = "localhost"
+rpi_ip = "192.168.4.205"
 rpi_port = 12345
 
 
@@ -61,6 +61,17 @@ def send_and_receive_one_message_to_rpi(message: bytes) -> bytes:
         send_message(connection_to_rpi, message)
         received_message = receive_message(connection_to_rpi)
     return received_message
+
+
+@app.get("/get_logs")
+def get_logs():
+    data = {"command": "get_log", "args": ""}
+    json_data = json.dumps(data)
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
+        json_bytes = receive_message(connection_to_rpi)
+        json_text = json.loads(json_bytes.decode("utf-8"))
+    return json_text
 
 
 @app.post("/alloff")
