@@ -366,6 +366,8 @@ def handle_received_data(
         logger.error(
             f"{TE}\n\nInvalid dictionary format. Please provide valid dictionary data.\n{received_data=}"
         )
+    except Exception as e:
+        logger.error(f"General Error:{e}")
 
 
 @log_when_functions_start_and_stop
