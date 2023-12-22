@@ -1,4 +1,5 @@
 import functools
+import io
 import socket
 import json
 import logging
@@ -29,6 +30,8 @@ from common.common_objects import setup_common_logger, all_standard_column_names
 
 logger = logging.getLogger("light_driver")
 logger = setup_common_logger(logger)
+log_capture = io.StringIO()
+logger.addHandler(logging.StreamHandler(log_capture))
 
 
 # set up global variables that will be shared accros the threads
@@ -55,13 +58,13 @@ shared_queue.put(current_df_sequence)
 
 
 def handle_get_logs(args, sock: socket.socket):
-    running_path = Path(".")
-    # csv_file_path = Path("/home/pi/github/xmastree2023/examples")
-    running_path.absolute()
-    files = list(map(str, list(running_path.glob("*"))))
-    files.append(str(running_path.absolute()))
+    # running_path = Path(".")
+    # # csv_file_path = Path("/home/pi/github/xmastree2023/examples")
+    # running_path.absolute()
+    # files = list(map(str, list(running_path.glob("*"))))
+    # files.append(str(running_path.absolute()))
 
-    send_message(sock, json.dumps(files).encode("utf-8"))
+    send_message(sock, json.dumps(log_capture).encode("utf-8"))
 
 
 def handle_fill(args, queue: queue.Queue):
