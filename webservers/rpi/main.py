@@ -58,13 +58,7 @@ shared_queue.put(current_df_sequence)
 
 
 def handle_get_logs(args, sock: socket.socket):
-    # running_path = Path(".")
-    # # csv_file_path = Path("/home/pi/github/xmastree2023/examples")
-    # running_path.absolute()
-    # files = list(map(str, list(running_path.glob("*"))))
-    # files.append(str(running_path.absolute()))
-
-    send_message(sock, json.dumps(log_capture).encode("utf-8"))
+    send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
 
 
 def handle_fill(args, queue: queue.Queue):
@@ -439,6 +433,7 @@ if __name__ == "__main__":
         while True:
             time.sleep(120)
             logger.getChild("main_loop").info("press ctrl+c to stop")
+            log_capture.truncate(10_000)
     except KeyboardInterrupt:
         stop_event.set()
         web_server_thread.join()
