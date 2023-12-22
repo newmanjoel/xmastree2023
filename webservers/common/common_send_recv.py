@@ -36,6 +36,9 @@ def receive_message(client_socket: socket.socket) -> bytes:
 
 
 def send_message(server_socket: socket.socket, message: bytes) -> None:
+    # Disable Nagle algorithm
+    server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+
     # Send the length of the message as the first 8 bytes
     message_length = len(message)
     server_socket.sendall(message_length.to_bytes(8, byteorder="big"))
