@@ -19,6 +19,8 @@ from pathlib import Path
 import os
 import sys
 
+from webservers.common.file_parser import rgb_to_int
+
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
@@ -144,7 +146,7 @@ def handle_file(args, queue: queue.Queue):
     start = time.time()
     results = pd.read_csv(file_path)
     end = time.time()
-    local_logger.debug(f"loaded the file to a dataframe and it took {end-start:0.3f}")
+    local_logger.debug(f"loaded the file to a dataframe and it took {end-start:0.3f}s")
 
     local_logger.debug(
         f"loaded the file to a dataframe and it is using {results.memory_usage(deep=True).sum()}b"
@@ -302,6 +304,30 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     return results  # type: ignore
 
 
+def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
+    local_logger = logger.getChild("c_df_2_ints")
+    local_logger.debug("starting conversion")
+    df_rows, df_columns = input_df.shape
+    results = [None] * df_rows
+    for index, row in input_df.iterrows():
+        row_list = [None] * led_num
+
+        for pixel_num in range(led_num):
+            row_list[pixel_num] = rgb_to_int(
+                row[f"R_{pixel_num}"], row[f"G_{pixel_num}"], row[f"B_{pixel_num}"]
+            )
+
+        results[index] = row_list  # type: ignore
+    local_logger.debug("ending conversion")
+    # local_logger.debug(f"\n{results}")
+    return results  # type: ignore
+
+
+def convert_df_to_byte_array(input_df: pd.DataFrame) -> list[bytes]:
+    # this takes in a dataframe and formats the bytes to be sent out
+    pass
+
+
 @log_when_functions_start_and_stop
 def running_with_standard_file(
     stop_event: threading.Event, working_queue: queue.Queue
@@ -309,7 +335,7 @@ def running_with_standard_file(
     global pixels, led_num
     local_logger = logger.getChild("running")
     working_df = current_df_sequence
-    fast_array = convert_df_to_list_of_tuples(working_df)
+    fast_array = convert_df_to_list_of_ints(working_df)
     while not stop_event.is_set():
         if not working_queue.empty():
             try:
@@ -323,11 +349,14 @@ def running_with_standard_file(
             if stop_event.is_set() or not working_queue.empty():
                 break
             time1 = time.time()
-            for pixel_num in range(led_num):
-                # local_logger.debug(f"Trying to set id {pixel_num} to {row}")
-                color = row[pixel_num]
-                pixels[pixel_num] = (color[0], color[1], color[2])
-                # local_logger.debug(f"set id {pixel_num} to {row}")
+            pixels[0:led_num] = row[0:led_num]
+            # for pixel_num in range(led_num):
+            #     # Loading Array:0.034s
+            #     # looping 500 times means 68uS per loop
+            #     # local_logger.debug(f"Trying to set id {pixel_num} to {row}")
+            #     color = row[pixel_num]
+            #     pixels[pixel_num] = (color[0], color[1], color[2])
+            #     # local_logger.debug(f"set id {pixel_num} to {row}")
             time2 = time.time()
             pixels.show()
             time3 = time.time()
@@ -341,6 +370,9 @@ def running_with_standard_file(
             else:
                 time.sleep(sleep_time)
             time4 = time.time()
+            # when at 30 FPS its at  Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
+            # lets get that loading array down
+
             # local_logger.debug(
             #     f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1):.3f}"
             # )
