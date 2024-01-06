@@ -19,7 +19,6 @@ from pathlib import Path
 import os
 import sys
 
-from webservers.common.file_parser import rgb_to_int
 
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +27,7 @@ sys.path.append(webservers_directory)
 
 from common.common_send_recv import send_message, receive_message
 from common.common_objects import setup_common_logger, all_standard_column_names
+from common.file_parser import rgb_to_int
 
 
 logger = logging.getLogger("light_driver")
