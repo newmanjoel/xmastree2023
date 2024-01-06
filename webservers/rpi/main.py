@@ -19,6 +19,7 @@ from pathlib import Path
 import os
 import sys
 
+show_fps: bool = True
 
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -231,6 +232,7 @@ def handle_getting_temp(args, sock: socket.socket) -> None:
 def handle_if_command(
     command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
 ) -> None:
+    global show_fps
     # Define the logic to handle different commands
     logger.debug(f"{command=}")
     target_command = command.get("command", "error")
@@ -262,6 +264,8 @@ def handle_if_command(
         handle_getting_temp(command["args"], sock)
     elif target_command == "fps":
         handle_fps(command["args"])
+    elif target_command == "toggle_fps":
+        show_fps = not show_fps
     elif target_command == "pause":
         handle_fps(0)
     elif target_command == "stop":
@@ -332,7 +336,7 @@ def convert_df_to_byte_array(input_df: pd.DataFrame) -> list[bytes]:
 def running_with_standard_file(
     stop_event: threading.Event, working_queue: queue.Queue
 ) -> None:
-    global pixels, led_num
+    global pixels, led_num, show_fps
     local_logger = logger.getChild("running")
     working_df = current_df_sequence
     fast_array = convert_df_to_list_of_ints(working_df)
@@ -372,10 +376,10 @@ def running_with_standard_file(
             time4 = time.time()
             # when at 30 FPS its at  Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
             # lets get that loading array down
-
-            # local_logger.debug(
-            #     f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1):.3f}"
-            # )
+            if show_fps:
+                local_logger.debug(
+                    f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1):.3f}"
+                )
 
 
 def handle_received_data(
