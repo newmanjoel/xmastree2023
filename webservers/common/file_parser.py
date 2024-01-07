@@ -48,7 +48,7 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
 
 
 def rgb_to_int(r: int, g: int, b: int) -> int:
-    return (r << 16) | (g << 8) | b
+    return int((r << 16) | (g << 8) | b)
 
 
 def read_GIFT_file(file_path: Path) -> tuple[list[Led_Location], pd.DataFrame]:

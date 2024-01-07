@@ -58,7 +58,6 @@ shared_web_command_queue = queue.Queue()
 lock = threading.Lock()
 
 
-# shared_queue.put(current_df_sequence)
 shared_web_command_queue.put(
     {
         "command": "loadfile",
@@ -99,7 +98,7 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     return results  # type: ignore
 
 
-def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
+def convert_df_to_list_of_int(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger = logger.getChild("c_df_2_ints")
     local_logger.debug("starting conversion")
     df_rows, df_columns = input_df.shape
@@ -119,14 +118,12 @@ def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
 
 
 @log_when_functions_start_and_stop
-def running_with_standard_file(
-    stop_event: threading.Event, display_queue: queue.Queue
-) -> None:
+def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
     global pixels
     local_logger = logger.getChild("running")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
-    fast_array = convert_df_to_list_of_tuples(working_df)
+    fast_array = convert_df_to_list_of_int(working_df)
     led_amount = int(config.led_num)
     while not stop_event.is_set():
         if not display_queue.empty():
@@ -134,7 +131,7 @@ def running_with_standard_file(
                 working_df: pd.DataFrame = display_queue.get()
                 config.current_dataframe = working_df
                 local_logger.info("Changing to new df")
-                fast_array = convert_df_to_list_of_tuples(working_df)
+                fast_array = convert_df_to_list_of_int(working_df)
             except queue.Empty as e:
                 pass
 
@@ -253,7 +250,7 @@ if __name__ == "__main__":
     )
 
     running_thread = threading.Thread(
-        target=running_with_standard_file, args=(stop_event, display_queue)
+        target=show_data_on_leds, args=(stop_event, display_queue)
     )
 
     # Start the threads
