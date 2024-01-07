@@ -158,7 +158,6 @@ def running_with_standard_file(
     working_df = pd.DataFrame(
         [[0, 0, 0] * config.led_num], index=range(1), columns=column_names
     )
-    working_df = pd.DataFrame(0, index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_ints(working_df)
     led_amount = int(config.led_num)
     while not stop_event.is_set():
