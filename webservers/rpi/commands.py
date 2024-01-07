@@ -1,30 +1,24 @@
-import queue
-import logging
 import pandas as pd
+
 import threading
-import socket
+import queue
+
 import json
 from pathlib import Path
 import time
 
-# networking imports
-import socket
-import select
-import json
-
-import os, sys
+import logging
 
 # Add the root directory to the Python path
+import os, sys
+
 current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 import common.common_send_recv as common_send_recv
-from common.common_objects import (
-    setup_common_logger,
-    all_standard_column_names,
-)
-from common.common_send_recv import send_message, receive_message
+from common.common_objects import setup_common_logger, all_standard_column_names
+
 import config
 
 logger = logging.getLogger("commands")
@@ -88,7 +82,7 @@ def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
 
 
 def handle_one(*, value: list[int], display_queue: queue.Queue, **kwargs):
-    # converts RGB into a GRB hex
+    # TODO: this requires testing. Cant seem to verify this by looking out the window
     if type(value) != list:
         logger.getChild("set_one").error(
             f"trying to fill with something that is not a list {type(value)=}\n{value=}"
@@ -121,7 +115,6 @@ def handle_getting_list_of_files(
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
     data = json.dumps(csv_files).encode("utf-8")
     send_queue.put((send_back, data))
-    # send_message(sock, data)
 
 
 def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -> None:
@@ -151,7 +144,7 @@ def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -
     display_queue.put(config.current_dataframe)
 
 
-def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
+def handle_show_df(*, send_back, send_queue: queue.Queue, **kwargs) -> None:
     # assuming that the data was created using the .to_json(orient='split') function
     raise NotImplementedError
     local_logger = logger.getChild("show_df")
