@@ -193,6 +193,7 @@ def set_stop_event(*, stop_event: threading.Event, **kwargs) -> None:
     stop_event.set()
 
 
+# this is a comment so that I can push an update; THANKS GIT
 all_commands = {
     "fps": handle_fps,
     "brightness": handle_brightness,
