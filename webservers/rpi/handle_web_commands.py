@@ -42,7 +42,7 @@ def handle_fps(*, value: float, **kwargs) -> None:
 
 
 def handle_brightness(*, value: float, **kwargs) -> None:
-    config.brightness = float(value)
+    config.pixels.brightness = float(value)  # type: ignore
 
 
 def handle_getting_temp(*, sock: socket.socket, **kwargs) -> None:
@@ -111,7 +111,6 @@ def handle_getting_list_of_files(*, sock: socket.socket, **kwargs) -> None:
     """Return a list of the current CSV's that can be played"""
     csv_file_path = Path("/home/pi/github/xmastree2023/examples")
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
-
     send_message(sock, json.dumps(csv_files).encode("utf-8"))
 
 
@@ -233,12 +232,15 @@ def handle_commands(
 
         # cheeky way of doing commands?
         func = all_commands.get(target_command, error_func)
-        func(
-            sock=socket,
-            value=target_args,
-            display_queue=display_queue,
-            stop_event=stop_event,
-        )
+        try:
+            func(
+                sock=socket,
+                value=target_args,
+                display_queue=display_queue,
+                stop_event=stop_event,
+            )
+        except:
+            pass
         # if target_command == "fill":
         #     handle_fill(target_args, display_queue)
         # elif target_command == "off":

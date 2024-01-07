@@ -6,8 +6,8 @@ import logging
 import threading
 import queue
 
-import board
-import neopixel
+import board  # type: ignore
+import neopixel  # type: ignore
 
 
 import pandas as pd
@@ -43,8 +43,9 @@ logger = setup_common_logger(logger)
 
 pixels = neopixel.NeoPixel(board.D12, int(config.led_num), auto_write=False)
 pixels.fill((100, 100, 100))
-pixels.brightness = config.brightness
 pixels.show()
+
+config.pixels = pixels
 
 
 stop_event = threading.Event()
