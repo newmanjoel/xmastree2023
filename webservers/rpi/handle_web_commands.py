@@ -150,9 +150,15 @@ def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
 
 
 def handle_get_current_df(*, sock: socket.socket, **kwargs) -> None:
+    local_logger = logger.getChild("get_current_df")
+
     working_df = config.current_dataframe
-    json_data = json.dumps(working_df.to_json(orient="index"))  # type: ignore
+    local_logger.debug(f"dumping the dataframe to a json string")
+    json_text = working_df.to_json(orient="index")  # type: ignore
+    json_data = json.dumps(json_text)
+    local_logger.debug(f"sending the data")
     send_message(sock, json_data.encode("utf-8"))
+    local_logger.debug(f"data sent")
 
 
 def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
