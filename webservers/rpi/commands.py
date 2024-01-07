@@ -38,8 +38,9 @@ logger.info(f"{config.fps=}")
 column_names = all_standard_column_names(config.led_num)
 
 
-def handle_get_logs(*, sock: socket.socket, **kwargs):
-    send_message(sock, json.dumps(config.log_capture.getvalue()).encode("utf-8"))
+def handle_get_logs(*, send_back, send_queue: queue.Queue, **kwargs):
+    data = json.dumps(config.log_capture.getvalue()).encode("utf-8")
+    send_queue.put((send_back, data))
 
 
 def handle_fps(*, value: float, **kwargs) -> None:
@@ -50,7 +51,7 @@ def handle_brightness(*, value: float, **kwargs) -> None:
     config.pixels.brightness = float(value)  # type: ignore
 
 
-def handle_getting_temp(*, sock: socket.socket, **kwargs) -> None:
+def handle_getting_temp(*, send_back, send_queue: queue.Queue, **kwargs) -> None:
     """measure the temperature of the raspberry pi"""
     import subprocess
 
@@ -61,7 +62,8 @@ def handle_getting_temp(*, sock: socket.socket, **kwargs) -> None:
         text=True,
     )
     json_string = json.dumps({"temp": str(result.stdout)})
-    send_message(sock, json_string.encode("utf-8"))
+    data = json_string.encode("utf-8")
+    send_queue.put((send_back, data))
     logger.getChild("temp").debug(f"Sent back {json_string}")
 
 
@@ -113,13 +115,13 @@ def handle_one(*, value: list[int], display_queue: queue.Queue, **kwargs):
 
 
 def handle_getting_list_of_files(
-    *, send_queue: queue.Queue, sock: socket.socket, **kwargs
+    *, send_back, send_queue: queue.Queue, **kwargs
 ) -> None:
     """Return a list of the current CSV's that can be played"""
     csv_file_path = Path("/home/pi/github/xmastree2023/examples")
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
     data = json.dumps(csv_files).encode("utf-8")
-    send_queue.put((sock, data))
+    send_queue.put((send_back, data))
     # send_message(sock, data)
 
 
@@ -162,16 +164,15 @@ def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
         local_logger.error(f"got exception {e=}")
 
 
-def handle_get_current_df(*, sock: socket.socket, **kwargs) -> None:
+def handle_get_current_df(*, send_back, send_queue: queue.Queue, **kwargs) -> None:
     local_logger = logger.getChild("get_current_df")
 
     working_df = config.current_dataframe
     local_logger.debug(f"dumping the dataframe to a json string")
     json_text = working_df.to_json(orient="index")  # type: ignore
     json_data = json.dumps(json_text)
-    local_logger.debug(f"sending the data")
-    send_message(sock, json_data.encode("utf-8"))
-    local_logger.debug(f"data sent")
+    data = json_data.encode("utf-8")
+    send_queue.put((send_back, data))
 
 
 def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
@@ -263,13 +264,13 @@ def handle_commands(
 
         target_command = current_request.get("command", "error")
         target_args = current_request.get("args", None)
-        socket = current_request.get("socket", None)
+        send_back = current_request.get("send_back", None)
 
         # cheeky way of doing commands?
         func = all_commands.get(target_command, error_func)
         try:
             func(
-                sock=socket,
+                send_back=send_back,
                 value=target_args,
                 display_queue=display_queue,
                 send_queue=send_queue,

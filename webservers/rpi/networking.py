@@ -33,7 +33,7 @@ def confirm_and_handle_json_command(
         command = json.loads(received_data)
         if type(command) == str:
             raise TypeError
-        command["socket"] = sock
+        command["send_back"] = sock
         command_queue.put(command)
 
     except json.JSONDecodeError as JDE:
