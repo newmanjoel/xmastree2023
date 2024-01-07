@@ -153,11 +153,8 @@ def running_with_standard_file(
 ) -> None:
     global pixels
     local_logger = logger.getChild("running")
-    # data = [0, 0, 0] * config.led_num
-
-    working_df = pd.DataFrame(
-        [[0, 0, 0] * config.led_num], index=range(1), columns=column_names
-    )
+    data = [100, 0, 0] * config.led_num
+    working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_ints(working_df)
     local_logger.debug(fast_array)
     led_amount = int(config.led_num)
