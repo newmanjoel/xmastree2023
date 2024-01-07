@@ -54,6 +54,7 @@ def send_back_networked_message(sock: socket.socket, data: bytes) -> None:
 
 def send_back_manager(stop_event: threading.Event, send_queue: queue.Queue) -> None:
     local_logger = logger.getChild("send_back_manager")
+    local_logger.info("Starting")
     while not stop_event.is_set():
         try:
             current_request = send_queue.get(timeout=1)
@@ -68,9 +69,9 @@ def send_back_manager(stop_event: threading.Event, send_queue: queue.Queue) -> N
             local_logger.error(
                 f"Was told to send back message of {data=} on the medium {type(sending_medium)} {sending_medium=}"
             )
+    local_logger.info("Exiting")
 
 
-@log_when_functions_start_and_stop
 def handle_networking(
     host: str,
     port: int,
@@ -79,6 +80,7 @@ def handle_networking(
     send_queue: queue.Queue,
 ) -> None:
     local_logger = logger.getChild("webserver")
+    local_logger.info("Starting")
 
     send_back_thread = threading.Thread(
         target=send_back_manager,
@@ -124,3 +126,4 @@ def handle_networking(
         stop_event.set()
         send_back_thread.join()
         server_socket.close()
+    local_logger.info("Exiting")

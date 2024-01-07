@@ -23,7 +23,6 @@ import common.common_send_recv as common_send_recv
 from common.common_objects import (
     setup_common_logger,
     all_standard_column_names,
-    log_when_functions_start_and_stop,
 )
 from common.common_send_recv import send_message, receive_message
 import config
@@ -250,6 +249,7 @@ def handle_commands(
     stop_event: threading.Event,
 ) -> None:
     local_logger = logger.getChild("dispatcher")
+    local_logger.info("Starting")
     while not stop_event.is_set():
         try:
             current_request = command_queue.get(timeout=1)
@@ -278,3 +278,4 @@ def handle_commands(
             )
         except:
             pass
+    local_logger.info("Exiting")

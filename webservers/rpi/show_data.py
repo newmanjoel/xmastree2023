@@ -10,7 +10,6 @@ import config
 from common.file_parser import grb_to_int
 from common.common_objects import (
     all_standard_column_names,
-    log_when_functions_start_and_stop,
     setup_common_logger,
 )
 
@@ -70,10 +69,10 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     return results
 
 
-@log_when_functions_start_and_stop
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
     global pixels
     local_logger = logger.getChild("running")
+    local_logger.info("Starting")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_int_speedy(working_df)
@@ -117,6 +116,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 local_logger.debug(
                     f"Loading Array:{packing_the_pixels:.3f}s Pushing Pixels:{pushing_the_pixels:.3f}s sleeping:{sleeping_time:.3f}s actual_FPS:{total_fps:.3f}"
                 )
+    local_logger.info("Exiting")
 
 
 pixels = setup()
