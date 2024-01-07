@@ -163,8 +163,9 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
             if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            for led_number in range(led_amount):
-                pixels[led_number] = row[led_number]
+            pixels[0:led_amount] = row
+            # for led_number in range(led_amount):
+            #     pixels[led_number] = row[led_number]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
