@@ -178,6 +178,7 @@ def handle_commands(
                 f"{type(current_request)=} {current_request=} is not of type dict"
             )
             current_request = {"error": "invalid request"}
+        local_logger.debug(f"{current_request=}")
         target_command = current_request.get("command", "error")
         target_args = current_request.get("args", None)
 
