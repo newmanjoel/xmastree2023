@@ -127,9 +127,9 @@ def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -
     # note that the rows and columns are one based and not zero based
     current_row, current_column = config.current_dataframe.shape  # type: ignore
 
-    if len(value) != current_column - 1:
+    if len(value) != current_column:
         logger.getChild("add_list").warning(
-            f"needed a list of len({current_column-1}), but got {len(value)} of {value=}"
+            f"needed a list of len({current_column}), but got {len(value)} of {value=}"
         )
         return
 
