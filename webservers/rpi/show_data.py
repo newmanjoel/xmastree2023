@@ -54,7 +54,6 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     working_df = sanitize_column_names(working_df)
     working_df.reindex(column_names, axis=1)
     df_rows, df_columns = working_df.shape
-    local_logger.debug(f"{working_df.shape=} {working_df.columns}")
     raw_data = working_df.to_numpy(dtype=np.ubyte)
     results = [[0]] * df_rows
     for row_index, row in enumerate(raw_data):
