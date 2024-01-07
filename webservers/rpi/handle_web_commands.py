@@ -115,6 +115,43 @@ def handle_getting_list_of_files(*, sock: socket.socket, **kwargs) -> None:
     send_message(sock, json.dumps(csv_files).encode("utf-8"))
 
 
+def handle_add_list(args, queue: queue.Queue) -> None:
+    raise NotImplementedError
+    if type(args) == list:
+        pass
+    else:
+        logger.getChild("add_list").warning(
+            f"needed a list, but got {type(args)} of {args=}"
+        )
+        return
+
+    if len(args) != config.led_num:
+        logger.getChild("add_list").warning(
+            f"needed a list of len({config.led_num}), but got {len(args)} of {args=}"
+        )
+        return
+
+    # going to assume this is in order
+    # note that the rows and columns are one based and not zero based
+    current_row, current_column = current_df_sequence.shape
+
+    with lock:
+        current_df_sequence.loc[current_row] = args
+        queue.put(current_df_sequence)
+
+
+def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
+    # assuming that the data was created using the .to_json(orient='split') function
+    raise NotImplementedError
+    local_logger = logger.getChild("show_df")
+    try:
+        current_df_sequence = pd.read_json(args, orient="split")
+        with lock:
+            queue.put(current_df_sequence)
+    except Exception as e:
+        local_logger.error(f"got exception {e=}")
+
+
 def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
     # load a csv file
     # load that into a dataframe

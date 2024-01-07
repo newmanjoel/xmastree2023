@@ -58,42 +58,12 @@ lock = threading.Lock()
 
 
 # shared_queue.put(current_df_sequence)
-
-
-def handle_add_list(args, queue: queue.Queue) -> None:
-    raise NotImplementedError
-    if type(args) == list:
-        pass
-    else:
-        logger.getChild("add_list").warning(
-            f"needed a list, but got {type(args)} of {args=}"
-        )
-        return
-
-    if len(args) != config.led_num:
-        logger.getChild("add_list").warning(
-            f"needed a list of len({config.led_num}), but got {len(args)} of {args=}"
-        )
-        return
-
-    # going to assume this is in order
-    # note that the rows and columns are one based and not zero based
-    current_row, current_column = current_df_sequence.shape
-
-    with lock:
-        current_df_sequence.loc[current_row] = args
-        queue.put(current_df_sequence)
-
-
-def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
-    # assuming that the data was created using the .to_json(orient='split') function
-    local_logger = logger.getChild("show_df")
-    try:
-        current_df_sequence = pd.read_json(args, orient="split")
-        with lock:
-            queue.put(current_df_sequence)
-    except Exception as e:
-        local_logger.error(f"got exception {e=}")
+shared_web_command_queue.put(
+    {
+        "command": "loadfile",
+        "args": "/home/pi/github/xmastree2023/examples/rainbow-implosion.csv",
+    }
+)
 
 
 def log_when_functions_start_and_stop(func):
