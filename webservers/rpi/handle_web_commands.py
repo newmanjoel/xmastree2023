@@ -60,7 +60,7 @@ def handle_getting_temp(*, sock: socket.socket, **kwargs) -> None:
     logger.getChild("temp").debug(f"Sent back {json_string}")
 
 
-def handle_fill(*, value: str, display_queue: queue.Queue, **kwargs):
+def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
     # converts RGB into a GRB hex
     if type(value) != list:
         logger.getChild("fill").error(
@@ -114,29 +114,27 @@ def handle_getting_list_of_files(*, sock: socket.socket, **kwargs) -> None:
     send_message(sock, json.dumps(csv_files).encode("utf-8"))
 
 
-def handle_add_list(args, queue: queue.Queue) -> None:
-    raise NotImplementedError
-    if type(args) == list:
+def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -> None:
+    if type(value) == list:
         pass
     else:
         logger.getChild("add_list").warning(
-            f"needed a list, but got {type(args)} of {args=}"
+            f"needed a list, but got {type(value)} of {value=}"
         )
         return
 
-    if len(args) != config.led_num:
+    if len(value) != config.led_num:
         logger.getChild("add_list").warning(
-            f"needed a list of len({config.led_num}), but got {len(args)} of {args=}"
+            f"needed a list of len({config.led_num}), but got {len(value)} of {value=}"
         )
         return
 
     # going to assume this is in order
     # note that the rows and columns are one based and not zero based
-    current_row, current_column = current_df_sequence.shape
+    # current_row, current_column = current_df_sequence.shape
 
-    with lock:
-        current_df_sequence.loc[current_row] = args
-        queue.put(current_df_sequence)
+    # current_df_sequence.loc[current_row] = value
+    # display_queue.put(current_df_sequence)
 
 
 def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:

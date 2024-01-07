@@ -104,21 +104,31 @@ def set_speed(fps: float):
     logger.getChild("speed").info(f"setting the {fps=}")
 
 
+@app.post("/toggle_fps")
+def toggle_fps():
+    """toggle the bit that says if I should print the current FPS to the console (DEFAULT: FALSE)"""
+    data = {"command": "toggle_fps", "args": ""}
+    send_dict_to_rpi(data)
+
+
+@app.post("/stop")
+def set_stop_event():
+    """toggle the bit that says if I should print the current FPS to the console (DEFAULT: FALSE)"""
+    data = {"command": "stop", "args": ""}
+    send_dict_to_rpi(data)
+
+
 @app.post("/addRandomColor")
 def addRandomColor():
     """add a random color to the existing sequence"""
-    # TODO: THIS IS BROKEN
-    n = 150
-    list_to_add = []
-    random_color = (
-        random.randint(0, 255),
-        random.randint(0, 255),
-        random.randint(0, 255),
-    )
 
-    for i in range(n):
-        list_to_add.append(random_color)
-    data = {"command": "addlist", "args": list_to_add}
+    random_color = [
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255),
+    ]
+
+    data = {"command": "fill", "args": random_color}
     # json_data = json.dumps(data)
     send_dict_to_rpi(data)
     logger.getChild("addRandomColor").info(
