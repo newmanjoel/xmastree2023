@@ -43,7 +43,7 @@ logger = setup_common_logger(logger)
 
 pixels = neopixel.NeoPixel(board.D12, config.led_num, auto_write=False)
 pixels.fill((100, 100, 100))
-pixels.brightness=config.brightness
+pixels.brightness = config.brightness
 pixels.show()
 
 
@@ -60,9 +60,7 @@ lock = threading.Lock()
 # shared_queue.put(current_df_sequence)
 
 
-
 def handle_add_list(args, queue: queue.Queue) -> None:
-    global current_df_sequence, config.led_num
     raise NotImplementedError
     if type(args) == list:
         pass
@@ -139,7 +137,7 @@ def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
         row_list = [None] * config.led_num
 
         for pixel_num in range(config.led_num):
-            row_list[pixel_num] = rgb_to_int( # type: ignore
+            row_list[pixel_num] = rgb_to_int(  # type: ignore
                 row[f"R_{pixel_num}"], row[f"G_{pixel_num}"], row[f"B_{pixel_num}"]
             )
 
@@ -170,7 +168,7 @@ def running_with_standard_file(
             if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            pixels[0:config.led_num] = row[0:config.led_num]
+            pixels[0 : config.led_num] = row[0 : config.led_num]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
@@ -267,15 +265,16 @@ def start_server(
 
 
 if __name__ == "__main__":
-
     stop_event.clear()
 
     web_server_thread = threading.Thread(
-        target=start_server, args=(config.host, config.rx_port, stop_event, shared_web_command_queue)
+        target=start_server,
+        args=(config.host, config.rx_port, stop_event, shared_web_command_queue),
     )
 
     handle_web_command_thread = threading.Thread(
-        target=handle_commands, args=(shared_web_command_queue, display_queue, stop_event)
+        target=handle_commands,
+        args=(shared_web_command_queue, display_queue, stop_event),
     )
 
     running_thread = threading.Thread(
