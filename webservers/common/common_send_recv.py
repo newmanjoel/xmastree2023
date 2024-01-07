@@ -7,7 +7,8 @@ from common.common_objects import setup_common_logger
 logger = logging.getLogger("common")
 logger = setup_common_logger(logger)
 
-verbose: bool = False
+verbose: bool = True
+default_chunk_size = 4096
 
 
 def receive_message(client_socket: socket.socket) -> bytes:
@@ -26,10 +27,13 @@ def receive_message(client_socket: socket.socket) -> bytes:
     remaining_bytes = message_length
 
     while remaining_bytes > 0:
-        chunk_size = min(
-            4096, remaining_bytes
-        )  # Adjust the chunk size based on your needs
+        # Adjust the chunk size based on your needs
+        chunk_size = min(default_chunk_size, remaining_bytes)
         chunk = client_socket.recv(chunk_size)
+        if verbose:
+            logger.getChild("recv").debug(
+                f"receved  [{chunk_size}:{remaining_bytes}] out of {message_length}"
+            )
         if not chunk:
             # Connection closed prematurely
             break
@@ -54,11 +58,14 @@ def send_message(server_socket: socket.socket, message: bytes) -> None:
     # message = message_length_bytes + message
 
     # Send the message in chunks
-    chunk_size = 4096  # Adjust the chunk size based on your needs
     offset = 0
     while offset < message_length:
-        end_offset = min(offset + chunk_size, message_length)
+        end_offset = min(offset + default_chunk_size, message_length)
         server_socket.sendall(message[offset:end_offset])
+        if verbose:
+            logger.getChild("send").debug(
+                f"sent chunk [{offset}:{end_offset}] out of {message_length}"
+            )
         offset = end_offset
     if verbose:
         logger.getChild("send").debug(f"Finished Sending")
