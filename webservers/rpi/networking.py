@@ -48,6 +48,22 @@ def confirm_and_handle_json_command(
         logger.error(f"General Error:{e}")
 
 
+def send_back_networked_message(
+    stop_event: threading.Event, send_queue: queue.Queue
+) -> None:
+    local_logger = logger.getChild("sending")
+    while not stop_event.is_set():
+        try:
+            current_request = send_queue.get(timeout=1)
+        except queue.Empty:
+            continue
+        local_logger.debug(f"processing: {current_request=}")
+        # send queue should be full of bytes objects
+        sock, data = current_request
+        send_message(sock, data)
+        local_logger.debug(f"sent {data} to {sock}")
+
+
 @log_when_functions_start_and_stop
 def handle_networking(
     host: str,
@@ -57,6 +73,13 @@ def handle_networking(
     send_queue: queue.Queue,
 ) -> None:
     local_logger = logger.getChild("webserver")
+
+    send_back_thread = threading.Thread(
+        target=send_back_networked_message,
+        args=(stop_event, send_queue),
+    )
+    send_back_thread.start()
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         server_socket.setblocking(0)  # type: ignore
@@ -92,4 +115,6 @@ def handle_networking(
     except KeyboardInterrupt:
         pass
     finally:
+        stop_event.set()
+        send_back_thread.join()
         server_socket.close()

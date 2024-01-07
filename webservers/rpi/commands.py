@@ -28,7 +28,7 @@ from common.common_objects import (
 from common.common_send_recv import send_message, receive_message
 import config
 
-logger = logging.getLogger("web_commands")
+logger = logging.getLogger("commands")
 logger = setup_common_logger(logger)
 
 
@@ -112,11 +112,15 @@ def handle_one(*, value: list[int], display_queue: queue.Queue, **kwargs):
     display_queue.put(current_df_sequence)
 
 
-def handle_getting_list_of_files(*, sock: socket.socket, **kwargs) -> None:
+def handle_getting_list_of_files(
+    *, send_queue: queue.Queue, sock: socket.socket, **kwargs
+) -> None:
     """Return a list of the current CSV's that can be played"""
     csv_file_path = Path("/home/pi/github/xmastree2023/examples")
     csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
-    send_message(sock, json.dumps(csv_files).encode("utf-8"))
+    data = json.dumps(csv_files).encode("utf-8")
+    send_queue.put((sock, data))
+    # send_message(sock, data)
 
 
 def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -> None:

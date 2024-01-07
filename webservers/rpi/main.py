@@ -24,7 +24,7 @@ import config
 
 
 from common.common_objects import setup_common_logger
-from handle_web_commands import handle_commands
+from commands import handle_commands
 from networking import handle_networking
 from show_data import show_data_on_leds
 
