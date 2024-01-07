@@ -19,7 +19,9 @@ from pathlib import Path
 import os
 import sys
 
-show_fps: bool = True
+from handle_web_commands import handle_file, handle_fill, handle_one
+
+show_fps: bool = False
 
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
@@ -43,7 +45,7 @@ pixels = neopixel.NeoPixel(board.D12, led_num, auto_write=False)
 pixels.fill((100, 100, 100))
 pixels.show()
 
-fps = 10
+fps = 15
 stop_event = threading.Event()
 stop_event.clear()
 
@@ -64,52 +66,10 @@ def handle_get_logs(args, sock: socket.socket):
     send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
 
 
-def handle_fill(args, queue: queue.Queue):
-    # converts RGB into a GRB hex
-    if type(args) != list:
-        logger.getChild("fill").error(
-            f"trying to fill with something that is not a list {type(args)=}\n{args=}"
-        )
-        return
-    if len(args) != 3:
-        logger.getChild("fill").error(
-            f"trying to fill with more than 3 elements {len(args)=}\n{args=}"
-        )
-        return
-    color_r = int(args[0])
-    color_g = int(args[1])
-    color_b = int(args[2])
-    data = [color_g, color_r, color_b] * led_num
-    with lock:
-        current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
-        queue.put(current_df_sequence)
 
 
-def handle_one(args, queue: queue.Queue):
-    # converts RGB into a GRB hex
-    if type(args) != list:
-        logger.getChild("fill").error(
-            f"trying to fill with something that is not a list {type(args)=}\n{args=}"
-        )
-        return
-    if len(args) != 4:
-        logger.getChild("fill").error(
-            f"trying to fill with more than 3 elements {len(args)=}\n{args=}"
-        )
-        return
-    index = int(args[0])
-    color_r = int(args[1])
-    color_g = int(args[2])
-    color_b = int(args[3])
 
-    data = [0, 0, 0] * led_num
-    data[index] = color_r
-    data[index + 1] = color_g
-    data[index + 2] = color_b
 
-    with lock:
-        current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
-        queue.put(current_df_sequence)
 
 
 def handle_fps(args):
@@ -126,35 +86,6 @@ def handle_fps(args):
             f"Tried to set the FPS to {args=}, this needs to be a number."
         )
 
-
-def handle_file(args, queue: queue.Queue):
-    # load a csv file
-    # load that into a dataframe
-    # check that it has the right size
-    # check that each element is a hex code
-    local_logger = logger.getChild("handle_file")
-
-    if type(args) != str:
-        local_logger.error(f"needed a file path, got {type(args)=}, {args=}")
-        return
-    file_path = Path(args)
-    if not file_path.exists():
-        local_logger.error(f"File dosn't exist. {file_path=}")
-        return
-
-    results = None
-
-    start = time.time()
-    results = pd.read_csv(file_path)
-    end = time.time()
-    local_logger.debug(f"loaded the file to a dataframe and it took {end-start:0.3f}s")
-
-    local_logger.debug(
-        f"loaded the file to a dataframe and it is using {results.memory_usage(deep=True).sum()}b"
-    )
-    with lock:
-        current_df_sequence = results
-        queue.put(current_df_sequence)
 
 
 def handle_brightness(args) -> None:
