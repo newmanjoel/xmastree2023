@@ -8,7 +8,6 @@ from pathlib import Path
 import time
 import io
 
-
 import os, sys
 
 # Add the root directory to the Python path
@@ -180,9 +179,10 @@ def handle_commands(
 ) -> None:
     local_logger = logger.getChild("dispatcher")
     while not stop_event.is_set():
-        current_request = (
-            web_command_queue.get()
-        )  # this will block until there is something on the queue
+        try:
+            current_request = web_command_queue.get(timeout=1)
+        except queue.Empty:
+            continue
         if type(current_request) != dict:
             local_logger.error(
                 f"{type(current_request)=} {current_request=} is not of type dict"
