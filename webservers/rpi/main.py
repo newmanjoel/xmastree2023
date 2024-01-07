@@ -19,11 +19,9 @@ from pathlib import Path
 import os
 import sys
 
-from settings_manager import SettingsManager
+import config
 
-# Initialize the settings manager
-settings_manager = SettingsManager()
-settings_manager.set_setting("fps", "15")
+config.fps = 11
 
 from handle_web_commands import handle_file, handle_fill, handle_one
 

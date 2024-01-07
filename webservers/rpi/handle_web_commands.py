@@ -14,13 +14,13 @@ sys.path.append(webservers_directory)
 
 
 from common.common_objects import setup_common_logger, all_standard_column_names
-from settings_manager import SettingsManager
+import config
 
 logger = logging.getLogger("web_commands")
 logger = setup_common_logger(logger)
 
-settings_manager = SettingsManager()
-logger.info(f"{settings_manager.get_setting('fps')=}")
+
+logger.info(f"{config.fps=}")
 
 
 led_num = 500
