@@ -140,13 +140,11 @@ def addRandomColor():
     data_to_send = random_color * 500
 
     data = {"command": "addlist", "args": data_to_send}
-    common_send_recv.verbose = True
     # json_data = json.dumps(data)
     send_dict_to_rpi(data)
     logger.getChild("addRandomColor").info(
         f"added the color {random_color} to the current sequence"
     )
-    common_send_recv.verbose = False
 
 
 @app.post("/fillWithRandomColor")

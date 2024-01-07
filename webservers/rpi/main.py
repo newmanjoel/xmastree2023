@@ -45,7 +45,7 @@ logger = setup_common_logger(logger)
 
 # set up global variables that will be shared accros the threads
 
-pixels = neopixel.NeoPixel(board.D12, int(config.led_num), auto_write=False)
+pixels = neopixel.NeoPixel(board.D12, config.led_num, auto_write=False)
 pixels.fill((100, 100, 100))
 pixels.show()
 

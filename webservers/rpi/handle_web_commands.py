@@ -30,7 +30,7 @@ logger.info(f"{config.fps=}")
 column_names = all_standard_column_names(config.led_num)
 
 log_capture = io.StringIO()
-logger.addHandler(logging.StreamHandler(log_capture))
+logging.getLogger().addHandler(logging.StreamHandler(log_capture))
 
 
 def handle_get_logs(*, sock: socket.socket, **kwargs):
