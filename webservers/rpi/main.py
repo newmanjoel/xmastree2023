@@ -98,10 +98,37 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     return results  # type: ignore
 
 
+@log_when_functions_start_and_stop
+def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
+    local_logger = logger.getChild("c_df_2_ints")
+    local_logger.debug("starting conversion")
+    working_df = input_df.copy(deep=True)
+    working_df = working_df.drop("FRAME_ID")
+    df_rows, df_columns = working_df.shape
+    local_logger.debug(f"{working_df.shape=}")
+
+    raw_data = working_df.to_numpy(dtype="int8")
+    results = [0] * df_rows
+    for row in raw_data:
+        row_list = [0] * config.led_num
+
+        for pixel_num in range(config.led_num):
+            row_list[pixel_num] = rgb_to_int(
+                row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
+            )
+
+        results[index] = row_list  # type: ignore
+    local_logger.debug("ending conversion")
+    # local_logger.debug(f"\n{results}")
+    return results  # type: ignore
+
+
+@log_when_functions_start_and_stop
 def convert_df_to_list_of_int(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger = logger.getChild("c_df_2_ints")
     local_logger.debug("starting conversion")
     df_rows, df_columns = input_df.shape
+
     results = [None] * df_rows
     for index, row in input_df.iterrows():
         row_list = [None] * config.led_num
@@ -123,7 +150,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
     local_logger = logger.getChild("running")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
-    fast_array = convert_df_to_list_of_int(working_df)
+    fast_array = convert_df_to_list_of_int_speedy(working_df)
     led_amount = int(config.led_num)
     while not stop_event.is_set():
         if not display_queue.empty():
@@ -131,7 +158,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 working_df: pd.DataFrame = display_queue.get()
                 config.current_dataframe = working_df
                 local_logger.info("Changing to new df")
-                fast_array = convert_df_to_list_of_int(working_df)
+                fast_array = convert_df_to_list_of_int_speedy(working_df)
             except queue.Empty as e:
                 pass
 
