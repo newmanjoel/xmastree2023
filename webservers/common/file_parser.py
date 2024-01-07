@@ -51,7 +51,7 @@ def rgb_to_int(r: int, g: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
 
-def grb_to_int(r: int, g: int, b: int) -> int:
+def grb_to_int(g: int, r: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
 
