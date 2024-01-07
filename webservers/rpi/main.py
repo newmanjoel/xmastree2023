@@ -98,10 +98,10 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     return results  # type: ignore
 
 
-@log_when_functions_start_and_stop
 def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger = logger.getChild("c_df_2_ints_speedy")
     local_logger.debug("starting conversion")
+    start_time = time.time()
     working_df = input_df.copy(deep=True)
     if "FRAME_ID" in working_df.columns:
         working_df = working_df.drop("FRAME_ID", axis=1)
@@ -116,7 +116,10 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
                 row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
             )
         results[row_index] = row_list
-    local_logger.debug("ending conversion")
+    end_time = time.time()
+    local_logger.debug(
+        f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
+    )
     return results
 
 
@@ -164,8 +167,6 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 break
             time1 = time.time()
             pixels[0:led_amount] = row
-            # for led_number in range(led_amount):
-            #     pixels[led_number] = row[led_number]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
@@ -180,7 +181,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 time.sleep(sleep_time)
             time4 = time.time()
             # Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
-            # lets get that loading array down
+            # Loading Array:0.007s Pushing Pixels:0.019s sleeping:0.000s actual_FPS:38.318
             if config.show_fps:
                 packing_the_pixels = time2 - time1
                 pushing_the_pixels = time3 - time2
