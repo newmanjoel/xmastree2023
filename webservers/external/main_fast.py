@@ -21,6 +21,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
+import common.common_send_recv as common_send_recv
 from common.common_send_recv import send_message, receive_message
 from common.common_objects import setup_common_logger
 
@@ -119,6 +120,13 @@ def set_stop_event():
     send_dict_to_rpi(data)
 
 
+@app.post("/verbose")
+def toggle_verbose():
+    """toggle the bit that says if I should print the send and recv data to the console (DEFAULT: FALSE)"""
+    data = {"command": "verbose", "args": ""}
+    send_dict_to_rpi(data)
+
+
 @app.post("/addRandomColor")
 def addRandomColor():
     """add a random color to the existing sequence"""
@@ -132,11 +140,13 @@ def addRandomColor():
     data_to_send = random_color * 500
 
     data = {"command": "addlist", "args": data_to_send}
+    common_send_recv.verbose = True
     # json_data = json.dumps(data)
     send_dict_to_rpi(data)
     logger.getChild("addRandomColor").info(
         f"added the color {random_color} to the current sequence"
     )
+    common_send_recv.verbose = False
 
 
 @app.post("/fillWithRandomColor")

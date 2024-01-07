@@ -15,7 +15,7 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
-
+import common.common_send_recv as common_send_recv
 from common.common_objects import setup_common_logger, all_standard_column_names
 from common.common_send_recv import send_message
 import config
@@ -199,6 +199,13 @@ def set_stop_event(*, stop_event: threading.Event, **kwargs) -> None:
     stop_event.set()
 
 
+def handle_verbose_logging(**kwargs) -> None:
+    common_send_recv.verbose = not common_send_recv.verbose
+    logger.getChild("verbose").debug(
+        f"Set the send and recv logging verbose to {common_send_recv.verbose}"
+    )
+
+
 # this is a comment so that I can push an update; THANKS GIT
 all_commands = {
     "fps": handle_fps,
@@ -213,6 +220,7 @@ all_commands = {
     "stop": set_stop_event,
     "addlist": handle_add_list,
     "get_current_df": handle_get_current_df,
+    "verbose": handle_verbose_logging,
 }
 
 

@@ -31,11 +31,13 @@ current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
+import common.common_send_recv as common_send_recv
 from common.common_send_recv import receive_message
 from common.common_objects import setup_common_logger
 from common.file_parser import rgb_to_int
 from handle_web_commands import handle_commands, column_names
 
+common_send_recv.verbose = True
 
 logger = logging.getLogger("light_driver")
 logger = setup_common_logger(logger)
