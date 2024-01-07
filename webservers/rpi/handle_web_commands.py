@@ -239,14 +239,15 @@ def error_func(*args, **kwargs):
 
 
 def handle_commands(
-    web_command_queue: queue.Queue,
+    command_queue: queue.Queue,
     display_queue: queue.Queue,
+    send_queue: queue.Queue,
     stop_event: threading.Event,
 ) -> None:
     local_logger = logger.getChild("dispatcher")
     while not stop_event.is_set():
         try:
-            current_request = web_command_queue.get(timeout=1)
+            current_request = command_queue.get(timeout=1)
         except queue.Empty:
             continue
         if type(current_request) != dict:
@@ -267,76 +268,8 @@ def handle_commands(
                 sock=socket,
                 value=target_args,
                 display_queue=display_queue,
+                send_queue=send_queue,
                 stop_event=stop_event,
             )
         except:
             pass
-
-
-def confirm_and_handle_json_command(
-    received_data: str,
-    stop_event: threading.Event,
-    sock: socket.socket,
-    web_command_queue: queue.Queue,
-) -> None:
-    try:
-        command = json.loads(received_data)
-        if type(command) == str:
-            raise TypeError
-        command["socket"] = sock
-        web_command_queue.put(command)
-
-    except json.JSONDecodeError as JDE:
-        logger.error(
-            f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
-        )
-    except TypeError as TE:
-        logger.error(
-            f"{TE}\n\nInvalid dictionary format. Please provide valid dictionary data.\n{received_data=}"
-        )
-    except Exception as e:
-        logger.error(f"General Error:{e}")
-
-
-@log_when_functions_start_and_stop
-def handle_networking(
-    host: str, port: int, stop_event: threading.Event, queue: queue.Queue
-) -> None:
-    local_logger = logger.getChild("webserver")
-    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        server_socket.setblocking(0)  # type: ignore
-        server_socket.bind((host, port))
-        server_socket.listen(5)
-
-        connected_clients = []
-
-        while not stop_event.is_set():
-            readable, _, _ = select.select(
-                [server_socket] + connected_clients, [], [], 0.2
-            )
-            for sock in readable:
-                if sock is server_socket:
-                    # New connection, accept it
-                    client_socket, client_address = sock.accept()
-                    client_socket.setblocking(0)
-                    local_logger.info(f"New connection from {client_address}")
-                    connected_clients.append(client_socket)
-                else:
-                    # Data received from an existing client
-                    data = receive_message(sock)
-                    if data:
-                        # print(f"Received data: {data.decode()}")
-                        confirm_and_handle_json_command(
-                            data.decode("utf-8"), stop_event, sock, queue
-                        )
-                    else:
-                        # No data received, the client has closed the connection
-                        local_logger.info(f"Connection closed by {sock.getpeername()}")
-                        connected_clients.remove(sock)
-                        sock.close()
-
-    except KeyboardInterrupt:
-        pass
-    finally:
-        server_socket.close()

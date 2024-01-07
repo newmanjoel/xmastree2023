@@ -24,7 +24,8 @@ import config
 
 
 from common.common_objects import setup_common_logger
-from handle_web_commands import handle_commands, handle_networking
+from handle_web_commands import handle_commands
+from networking import handle_networking
 from show_data import show_data_on_leds
 
 
@@ -42,10 +43,11 @@ config.log_capture = log_capture
 stop_event = threading.Event()
 stop_event.clear()
 display_queue = queue.Queue()
-shared_web_command_queue = queue.Queue()
+command_queue = queue.Queue()
+send_queue = queue.Queue()
 
 # put something in the command_queue right away so that it can boot to something
-shared_web_command_queue.put(
+command_queue.put(
     {
         "command": "loadfile",
         "args": "/home/pi/github/xmastree2023/examples/rainbow-implosion.csv",
@@ -58,12 +60,12 @@ if __name__ == "__main__":
 
     web_server_thread = threading.Thread(
         target=handle_networking,
-        args=(config.host, config.rx_port, stop_event, shared_web_command_queue),
+        args=(config.host, config.rx_port, stop_event, command_queue, send_queue),
     )
 
     command_thread = threading.Thread(
         target=handle_commands,
-        args=(shared_web_command_queue, display_queue, stop_event),
+        args=(command_queue, display_queue, send_queue, stop_event),
     )
 
     running_thread = threading.Thread(
