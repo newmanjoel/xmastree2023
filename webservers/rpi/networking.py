@@ -48,10 +48,12 @@ def confirm_and_handle_json_command(
         logger.error(f"General Error:{e}")
 
 
-def send_back_networked_message(
-    stop_event: threading.Event, send_queue: queue.Queue
-) -> None:
-    local_logger = logger.getChild("sending")
+def send_back_networked_message(sock: socket.socket, data: bytes) -> None:
+    send_message(sock, data)
+
+
+def send_back_manager(stop_event: threading.Event, send_queue: queue.Queue) -> None:
+    local_logger = logger.getChild("send_back_manager")
     while not stop_event.is_set():
         try:
             current_request = send_queue.get(timeout=1)
@@ -59,9 +61,13 @@ def send_back_networked_message(
             continue
         local_logger.debug(f"processing: {current_request=}")
         # send queue should be full of bytes objects
-        sock, data = current_request
-        send_message(sock, data)
-        local_logger.debug(f"sent {data} to {sock}")
+        sending_medium, data = current_request
+        if isinstance(sending_medium, socket.socket):
+            send_back_networked_message(sending_medium, data)
+        else:
+            local_logger.error(
+                f"Was told to send back message of {data=} on the medium {type(sending_medium)} {sending_medium=}"
+            )
 
 
 @log_when_functions_start_and_stop
@@ -75,7 +81,7 @@ def handle_networking(
     local_logger = logger.getChild("webserver")
 
     send_back_thread = threading.Thread(
-        target=send_back_networked_message,
+        target=send_back_manager,
         args=(stop_event, send_queue),
     )
     send_back_thread.start()
