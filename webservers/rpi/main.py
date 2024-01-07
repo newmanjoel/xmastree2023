@@ -169,7 +169,7 @@ def running_with_standard_file(
             if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            pixels[0:led_amount] = row[0:led_amount]
+            pixels[0:led_amount] = row
             time2 = time.time()
             pixels.show()
             time3 = time.time()
