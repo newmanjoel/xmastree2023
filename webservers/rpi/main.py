@@ -155,7 +155,7 @@ def running_with_standard_file(
     local_logger = logger.getChild("running")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
-    fast_array = convert_df_to_list_of_ints(working_df)
+    fast_array = convert_df_to_list_of_tuples(working_df)
     local_logger.debug(fast_array)
     led_amount = int(config.led_num)
     while not stop_event.is_set():

@@ -28,9 +28,7 @@ logger = setup_common_logger(logger)
 logger.info(f"{config.fps=}")
 
 
-led_num = 500
-
-column_names = all_standard_column_names(led_num)
+column_names = all_standard_column_names(config.led_num)
 
 log_capture = io.StringIO()
 logger.addHandler(logging.StreamHandler(log_capture))
@@ -78,7 +76,7 @@ def handle_fill(*, value: str, display_queue: queue.Queue, **kwargs):
     color_r = int(value[0])
     color_g = int(value[1])
     color_b = int(value[2])
-    data = [color_r, color_g, color_b] * led_num
+    data = [color_r, color_g, color_b] * config.led_num
 
     current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
     display_queue.put(current_df_sequence)
@@ -101,7 +99,7 @@ def handle_one(*, value: str, display_queue: queue.Queue, **kwargs):
     color_g = int(value[2])
     color_b = int(value[3])
 
-    data = [0, 0, 0] * led_num
+    data = [0, 0, 0] * config.led_num
     data[index] = color_r
     data[index + 1] = color_g
     data[index + 2] = color_b
@@ -152,8 +150,8 @@ all_commands = {
     "fps": handle_fps,
     "brightness": handle_brightness,
     "temp": handle_getting_temp,
-    "fill":handle_fill,
-    "single":handle_one,
+    "fill": handle_fill,
+    "single": handle_one,
     "loadfile": handle_file,
     "get_list_of_files": handle_getting_list_of_files,
     "get_log": handle_get_logs,
