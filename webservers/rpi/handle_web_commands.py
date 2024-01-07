@@ -149,6 +149,12 @@ def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
         local_logger.error(f"got exception {e=}")
 
 
+def handle_get_current_df(*, sock: socket.socket, **kwargs) -> None:
+    working_df = config.current_dataframe
+    json_data = json.dumps(working_df.to_json(orient="index"))  # type: ignore
+    send_message(sock, json_data.encode("utf-8"))
+
+
 def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
     # load a csv file
     # load that into a dataframe
@@ -199,6 +205,7 @@ all_commands = {
     "toggle_fps": toggle_fps,
     "stop": set_stop_event,
     "addlist": handle_add_list,
+    "get_current_df": handle_get_current_df,
 }
 
 

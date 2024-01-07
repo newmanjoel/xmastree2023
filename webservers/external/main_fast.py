@@ -1,3 +1,4 @@
+from io import StringIO
 import socket
 
 import pandas as pd
@@ -128,7 +129,9 @@ def addRandomColor():
         random.randint(0, 255),
     ]
 
-    data = {"command": "addlist", "args": [random_color] * 500}
+    data_to_send = random_color * 500
+
+    data = {"command": "addlist", "args": data_to_send}
     # json_data = json.dumps(data)
     send_dict_to_rpi(data)
     logger.getChild("addRandomColor").info(
@@ -164,6 +167,20 @@ def get_rpi_temp():
         json_bytes = receive_message(connection_to_rpi)
         json_text = json.loads(json_bytes.decode("utf-8"))
     return json_text
+
+
+@app.get("/get_current_df")
+def get_current_df():
+    """get the currently displayed dataframe"""
+    data = {"command": "get_current_df", "args": ""}
+    # json_data = json.dumps(data)
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_dict_to_rpi(data)
+        json_bytes = receive_message(connection_to_rpi)
+        json_text = json.loads(json_bytes.decode("utf-8"))
+    json_stringio = StringIO(json_text)
+    received_dataframe = pd.read_json(json_stringio, orient="index")
+    return f"{receive_dataframe}"
 
 
 @app.post("/brightness")
