@@ -150,6 +150,10 @@ def toggle_fps(**kwargs) -> None:
     config.show_fps = not config.show_fps
 
 
+def set_stop_event(*, stop_event: threading.Event, **kwargs) -> None:
+    stop_event.set()
+
+
 all_commands = {
     "fps": handle_fps,
     "brightness": handle_brightness,
@@ -160,6 +164,7 @@ all_commands = {
     "get_list_of_files": handle_getting_list_of_files,
     "get_log": handle_get_logs,
     "toggle_fps": toggle_fps,
+    "stop": set_stop_event,
 }
 
 
@@ -191,7 +196,12 @@ def handle_commands(
 
         # cheeky way of doing commands?
         func = all_commands.get(target_command, error_func)
-        func(sock=socket, value=target_args, display_queue=display_queue)
+        func(
+            sock=socket,
+            value=target_args,
+            display_queue=display_queue,
+            stop_event=stop_event,
+        )
         # if target_command == "fill":
         #     handle_fill(target_args, display_queue)
         # elif target_command == "off":
