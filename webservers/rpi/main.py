@@ -169,7 +169,8 @@ def running_with_standard_file(
             if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            pixels[0:led_amount] = row
+            for led_number in range(led_amount):
+                pixels[led_number] = row[led_number]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
