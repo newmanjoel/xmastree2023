@@ -84,6 +84,14 @@ def alloff():
     logger.getChild("all_off").info(f"turning off all the lights")
 
 
+@app.post("/set_one")
+def set_one_led(index: int, r: int = 255, g: int = 0, b: int = 0):
+    """Turn one led on at a specific color"""
+    data = {"command": "set_one", "args": [index, r, g, b]}
+    send_dict_to_rpi(data)
+    logger.getChild("set_one").info(f"sent {data=}")
+
+
 @app.post("/allRGB")
 def allred(r: int, g: int, b: int):
     """Turn on the RGB lights"""

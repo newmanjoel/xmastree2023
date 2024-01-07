@@ -34,6 +34,7 @@ logging.getLogger().addHandler(logging.StreamHandler(log_capture))
 
 
 def handle_get_logs(*, sock: socket.socket, **kwargs):
+    log_capture.truncate(100_000)
     send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
 
 
@@ -81,16 +82,16 @@ def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
     display_queue.put(current_df_sequence)
 
 
-def handle_one(*, value: str, display_queue: queue.Queue, **kwargs):
+def handle_one(*, value: list[int], display_queue: queue.Queue, **kwargs):
     # converts RGB into a GRB hex
     if type(value) != list:
-        logger.getChild("fill").error(
+        logger.getChild("set_one").error(
             f"trying to fill with something that is not a list {type(value)=}\n{value=}"
         )
         return
     if len(value) != 4:
-        logger.getChild("fill").error(
-            f"trying to fill with more than 3 elements {len(value)=}\n{value=}"
+        logger.getChild("set_one").error(
+            f"trying you need 4 elements to set a specific led {len(value)=}\n{value=}"
         )
         return
     index = int(value[0])
@@ -216,7 +217,7 @@ all_commands = {
     "brightness": handle_brightness,
     "temp": handle_getting_temp,
     "fill": handle_fill,
-    "single": handle_one,
+    "set_one": handle_one,
     "loadfile": handle_file,
     "get_list_of_files": handle_getting_list_of_files,
     "get_log": handle_get_logs,
