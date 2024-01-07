@@ -155,6 +155,7 @@ def running_with_standard_file(
     local_logger = logger.getChild("running")
     working_df = pd.DataFrame(0, index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_ints(working_df)
+    led_amount = int(config.led_num)
     while not stop_event.is_set():
         if not display_queue.empty():
             try:
@@ -168,7 +169,7 @@ def running_with_standard_file(
             if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            pixels[0 : config.led_num] = row[0 : config.led_num]
+            pixels[0:led_amount] = row[0:led_amount]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
