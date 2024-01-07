@@ -7,7 +7,7 @@ from common.common_objects import setup_common_logger
 logger = logging.getLogger("common")
 logger = setup_common_logger(logger)
 
-verbose: bool = True
+verbose: bool = False
 default_chunk_size = 4096
 
 

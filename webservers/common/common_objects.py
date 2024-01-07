@@ -31,6 +31,17 @@ def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     return logger
 
 
+def log_when_functions_start_and_stop(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logging.getLogger(func.__name__).debug(f"Function {func.__name__} started.")
+        result = func(*args, **kwargs)
+        logging.getLogger(func.__name__).debug(f"Function {func.__name__} ended.")
+        return result
+
+    return wrapper
+
+
 class Color(NamedTuple):
     r: int
     g: int
@@ -257,6 +268,28 @@ def all_info_for_plotting(loc: list[Led_Location], seq: Sequence) -> pd.DataFram
     results["z"] = list(map(get_z, results["led_id"]))
 
     return results
+
+
+def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
+    # TODO: Remove this, its not needed anymore
+    local_logger = logging.getLogger("c_df_2_l")
+    local_logger.debug("starting conversion")
+    df_rows, df_columns = input_df.shape
+    results = [None] * df_rows
+    for index, row in input_df.iterrows():
+        row_list = [None] * 500
+
+        for pixel_num in range(500):
+            row_list[pixel_num] = (  # type: ignore
+                row[f"G_{pixel_num}"],
+                row[f"R_{pixel_num}"],
+                row[f"B_{pixel_num}"],
+            )
+
+        results[index] = row_list  # type: ignore
+    local_logger.debug("ending conversion")
+    # local_logger.debug(f"\n{results}")
+    return results  # type: ignore
 
 
 if __name__ == "__main__":

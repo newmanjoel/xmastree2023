@@ -6,7 +6,11 @@ import socket
 import json
 from pathlib import Path
 import time
-import io
+
+# networking imports
+import socket
+import select
+import json
 
 import os, sys
 
@@ -16,8 +20,12 @@ webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 import common.common_send_recv as common_send_recv
-from common.common_objects import setup_common_logger, all_standard_column_names
-from common.common_send_recv import send_message
+from common.common_objects import (
+    setup_common_logger,
+    all_standard_column_names,
+    log_when_functions_start_and_stop,
+)
+from common.common_send_recv import send_message, receive_message
 import config
 
 logger = logging.getLogger("web_commands")
@@ -29,13 +37,9 @@ logger.info(f"{config.fps=}")
 
 column_names = all_standard_column_names(config.led_num)
 
-log_capture = io.StringIO()
-logging.getLogger().addHandler(logging.StreamHandler(log_capture))
-
 
 def handle_get_logs(*, sock: socket.socket, **kwargs):
-    log_capture.truncate(100_000)
-    send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
+    send_message(sock, json.dumps(config.log_capture.getvalue()).encode("utf-8"))
 
 
 def handle_fps(*, value: float, **kwargs) -> None:
@@ -267,45 +271,72 @@ def handle_commands(
             )
         except:
             pass
-        # if target_command == "fill":
-        #     handle_fill(target_args, display_queue)
-        # elif target_command == "off":
-        #     handle_fill([0, 0, 0], display_queue)
-        # elif target_command == "single":
-        #     handle_one(target_args, display_queue)
-        #     pass
-        # elif target_command == "list":
-        #     # handle_list(command['args'])
-        #     pass
-        # elif target_command == "addlist":
-        #     # handle_add_list(command["args"])
-        #     pass
-        # elif target_command == "get_log":
-        #     handle_get_logs(target_args, current_request.get("socket", None))
-        # elif target_command == "show_df":
-        #     handle_show_df(
-        #         target_args, current_request.get("socket", None), display_queue
-        #     )
-        # elif target_command == "loadfile":
-        #     handle_file(target_args, display_queue)
-        #     pass
-        # elif target_command == "brightness":
-        #     handle_brightness(target_args)
-        # elif target_command == "get_list_of_files":
-        #     handle_getting_list_of_files(
-        #         target_args, current_request.get("socket", None)
-        #     )
-        # elif target_command == "temp":
-        #     handle_getting_temp(target_args, current_request.get("socket", None))
-        # elif target_command == "fps":
-        #     handle_fps(target_args)
-        # elif target_command == "toggle_fps":
-        #     config.show_fps = not config.show_fps
-        # elif target_command == "pause":
-        #     handle_fps(0)
-        # elif target_command == "stop":
-        #     stop_event.set()
-        # elif target_command == "error":
-        #     logger.getChild("handle_commands").error(
-        #         f"Caught a dictionary error. The command parameter is invalid. {command=}"
-        #     )
+
+
+def confirm_and_handle_json_command(
+    received_data: str,
+    stop_event: threading.Event,
+    sock: socket.socket,
+    web_command_queue: queue.Queue,
+) -> None:
+    try:
+        command = json.loads(received_data)
+        if type(command) == str:
+            raise TypeError
+        command["socket"] = sock
+        web_command_queue.put(command)
+
+    except json.JSONDecodeError as JDE:
+        logger.error(
+            f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
+        )
+    except TypeError as TE:
+        logger.error(
+            f"{TE}\n\nInvalid dictionary format. Please provide valid dictionary data.\n{received_data=}"
+        )
+    except Exception as e:
+        logger.error(f"General Error:{e}")
+
+
+@log_when_functions_start_and_stop
+def handle_networking(
+    host: str, port: int, stop_event: threading.Event, queue: queue.Queue
+) -> None:
+    local_logger = logger.getChild("webserver")
+    server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        server_socket.setblocking(0)  # type: ignore
+        server_socket.bind((host, port))
+        server_socket.listen(5)
+
+        connected_clients = []
+
+        while not stop_event.is_set():
+            readable, _, _ = select.select(
+                [server_socket] + connected_clients, [], [], 0.2
+            )
+            for sock in readable:
+                if sock is server_socket:
+                    # New connection, accept it
+                    client_socket, client_address = sock.accept()
+                    client_socket.setblocking(0)
+                    local_logger.info(f"New connection from {client_address}")
+                    connected_clients.append(client_socket)
+                else:
+                    # Data received from an existing client
+                    data = receive_message(sock)
+                    if data:
+                        # print(f"Received data: {data.decode()}")
+                        confirm_and_handle_json_command(
+                            data.decode("utf-8"), stop_event, sock, queue
+                        )
+                    else:
+                        # No data received, the client has closed the connection
+                        local_logger.info(f"Connection closed by {sock.getpeername()}")
+                        connected_clients.remove(sock)
+                        sock.close()
+
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server_socket.close()
