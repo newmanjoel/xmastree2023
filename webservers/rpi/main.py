@@ -109,7 +109,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     df_rows, df_columns = working_df.shape
     local_logger.debug(f"{working_df.shape=}")
 
-    raw_data = working_df.to_numpy(dtype="int8")
+    raw_data = working_df.to_numpy()
+    local_logger.debug(f"{raw_data}")
     results = [0] * df_rows
     for row_index, row in enumerate(raw_data):
         row_list = [0] * config.led_num
