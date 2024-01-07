@@ -146,6 +146,10 @@ def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
     display_queue.put(current_df_sequence)
 
 
+def toggle_fps(**kwargs) -> None:
+    config.show_fps = not config.show_fps
+
+
 all_commands = {
     "fps": handle_fps,
     "brightness": handle_brightness,
@@ -155,6 +159,7 @@ all_commands = {
     "loadfile": handle_file,
     "get_list_of_files": handle_getting_list_of_files,
     "get_log": handle_get_logs,
+    "toggle_fps": toggle_fps,
 }
 
 
@@ -179,9 +184,9 @@ def handle_commands(
             )
             current_request = {"error": "invalid request"}
         local_logger.debug(f"{current_request=}")
+
         target_command = current_request.get("command", "error")
         target_args = current_request.get("args", None)
-
         socket = current_request.get("socket", None)
 
         # cheeky way of doing commands?
