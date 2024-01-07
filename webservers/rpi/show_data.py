@@ -1,4 +1,5 @@
 import logging
+import re
 import pandas as pd
 import numpy as np
 import time
@@ -32,13 +33,25 @@ def setup() -> neopixel.NeoPixel:
     return pixels
 
 
+def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
+    return_df = input_df.copy(deep=True)
+
+    def is_matching_pattern(s):
+        pattern = re.compile(r"^[a-zA-Z]_\d+$")
+        return bool(pattern.match(s))
+
+    for name in return_df.columns:
+        if not is_matching_pattern(name):
+            return_df.drop(name, axis=1, inplace=True)
+    return return_df
+
+
 def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger = logger.getChild("c_df_2_ints_speedy")
     local_logger.debug("starting conversion")
     start_time = time.time()
     working_df = input_df.copy(deep=True)
-    if "FRAME_ID" in working_df.columns:
-        working_df = working_df.drop("FRAME_ID", axis=1)
+    working_df = sanitize_column_names(working_df)
     working_df.reindex(column_names, axis=1)
     df_rows, df_columns = working_df.shape
     local_logger.debug(f"{working_df.shape=} {working_df.columns}")
