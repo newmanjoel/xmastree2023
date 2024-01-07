@@ -104,9 +104,8 @@ class Frame:
         self.id = frame_id
 
         for index, value in input_series.items():
-            hex_color = Color(0, 0, 0)
-            hex_color.from_hex(value)
-            led = Led(index, hex_color)
+            hex_color = color_from_hex(value)
+            led = Led(index, hex_color)  # type: ignore
             self.lights.append(led)
 
     def convert_to_df(self) -> pd.DataFrame:
