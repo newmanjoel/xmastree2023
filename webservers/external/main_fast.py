@@ -78,8 +78,7 @@ def get_logs():
 def alloff():
     """Turn off all of the lights"""
     data = {"command": "fill", "args": [0, 0, 0]}
-    json_data = json.dumps(data)
-    send_dict_to_rpi(json_data)
+    send_dict_to_rpi(data)
     logger.getChild("all_off").info(f"turning off all the lights")
 
 
@@ -87,8 +86,7 @@ def alloff():
 def allred(r: int, g: int, b: int):
     """Turn on the RGB lights"""
     data = {"command": "fill", "args": [r, g, b]}
-    json_data = json.dumps(data)
-    send_dict_to_rpi(json_data)
+    send_dict_to_rpi(data)
     logger.getChild("all_red").info(f"turning off all the lights")
 
 

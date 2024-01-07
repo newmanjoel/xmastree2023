@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import NamedTuple
 import functools
 from pathlib import Path
 import pandas as pd
@@ -30,28 +31,20 @@ def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     return logger
 
 
-@dataclass
-class Color:
+class Color(NamedTuple):
     r: int
     g: int
     b: int
-
-    def enforce_bounds(self) -> None:
-        min_value = 0
-        max_value = 255
-
-        self.r = int(min(max(self.r, min_value), max_value))
-        self.g = int(min(max(self.g, min_value), max_value))
-        self.b = int(min(max(self.b, min_value), max_value))
 
     def to_hex(self) -> str:
         # self.enforce_bounds()
         return f"#{self.r:02x}{self.g:02x}{self.b:02x}"
 
-    def from_hex(self, hex_string) -> None:
-        self.r = int(hex_string[1:3], 16)
-        self.g = int(hex_string[3:5], 16)
-        self.b = int(hex_string[5:7], 16)
+
+def color_from_hex(hex_string: str) -> Color:
+    return Color(
+        int(hex_string[1:3], 16), int(hex_string[3:5], 16), int(hex_string[5:7], 16)
+    )
 
 
 @dataclass
@@ -155,12 +148,12 @@ class Sequence:
 
     def create_from_df(self, input_df: pd.DataFrame, name: str, filepath: Path):
         index: int = 0
-        row: pd.Series = None
+        row: pd.Series = None  # type: ignore
         self.frames = []
         self.filepath = filepath
         self.name = name
 
-        for index, row in input_df.iterrows():
+        for index, row in input_df.iterrows():  # type: ignore
             u_frame = Frame(0, [])
             u_frame.create_from_series(row, index)
             self.frames.append(u_frame)
@@ -271,7 +264,6 @@ if __name__ == "__main__":
     color_bounds_check = Color(-1, 2555, 4)
     print(color_bounds_check.to_hex())
 
-    color_bounds_check.from_hex("#01FF04")
     print(color_bounds_check)
 
     # check the sequence to df

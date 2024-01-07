@@ -1,5 +1,5 @@
 import functools
-import io
+
 import socket
 import json
 import logging
@@ -21,85 +21,48 @@ import sys
 
 import config
 
-config.fps = 11
+from handle_web_commands import handle_commands
 
-from handle_web_commands import handle_file, handle_fill, handle_one
-
-
-show_fps: bool = False
 
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
-from common.common_send_recv import send_message, receive_message
-from common.common_objects import setup_common_logger, all_standard_column_names
+from common.common_send_recv import receive_message
+from common.common_objects import setup_common_logger
 from common.file_parser import rgb_to_int
+from handle_web_commands import handle_commands, column_names
 
 
 logger = logging.getLogger("light_driver")
 logger = setup_common_logger(logger)
-log_capture = io.StringIO()
-logger.addHandler(logging.StreamHandler(log_capture))
 
 
 # set up global variables that will be shared accros the threads
-led_num = 500
-pixels = neopixel.NeoPixel(board.D12, led_num, auto_write=False)
+
+pixels = neopixel.NeoPixel(board.D12, config.led_num, auto_write=False)
 pixels.fill((100, 100, 100))
+pixels.brightness=config.brightness
 pixels.show()
 
-fps = 15
+
 stop_event = threading.Event()
 stop_event.clear()
 
-shared_queue = queue.Queue()
+display_queue = queue.Queue()
+shared_web_command_queue = queue.Queue()
 
 
 lock = threading.Lock()
 
-column_names = all_standard_column_names(led_num)
 
-# Create DataFrame filling with black
-current_df_sequence = pd.DataFrame(0, index=range(1), columns=column_names)
+# shared_queue.put(current_df_sequence)
 
-shared_queue.put(current_df_sequence)
-
-
-def handle_get_logs(args, sock: socket.socket):
-    send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
-
-
-def handle_fps(args):
-    global fps
-    try:
-        args = float(args)
-    except Exception:
-        # this is bad, but IDC I check the type later
-        pass
-    if type(args) == int or type(args) == float:
-        fps = args
-    else:
-        logger.getChild("fps").warning(
-            f"Tried to set the FPS to {args=}, this needs to be a number."
-        )
-
-
-def handle_brightness(args) -> None:
-    local_logger = logger.getChild("brightness")
-    if type(args) != int and type(args) != float:
-        local_logger.error(f"need a float, got {type(args)=}, {args=}")
-        return
-    if float(args) > 1 or float(args) < 0:
-        local_logger.error(f"brightness out of bounds. Needs to be between 0 and 1")
-        return
-    brightness = float(args)
-    pixels.brightness = brightness
 
 
 def handle_add_list(args, queue: queue.Queue) -> None:
-    global current_df_sequence, led_num
+    global current_df_sequence, config.led_num
     raise NotImplementedError
     if type(args) == list:
         pass
@@ -109,9 +72,9 @@ def handle_add_list(args, queue: queue.Queue) -> None:
         )
         return
 
-    if len(args) != led_num:
+    if len(args) != config.led_num:
         logger.getChild("add_list").warning(
-            f"needed a list of len({led_num}), but got {len(args)} of {args=}"
+            f"needed a list of len({config.led_num}), but got {len(args)} of {args=}"
         )
         return
 
@@ -135,76 +98,6 @@ def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
         local_logger.error(f"got exception {e=}")
 
 
-def handle_getting_list_of_files(args, sock: socket.socket) -> None:
-    """Return a list of the current CSV's that can be played"""
-    csv_file_path = Path("/home/pi/github/xmastree2023/examples")
-    csv_files = list(map(str, list(csv_file_path.glob("*.csv"))))
-
-    send_message(sock, json.dumps(csv_files).encode("utf-8"))
-
-
-def handle_getting_temp(args, sock: socket.socket) -> None:
-    """measure the temperature of the raspberry pi"""
-    import subprocess
-
-    result = subprocess.run(
-        ["vcgencmd", "measure_temp"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True,
-    )
-    json_string = json.dumps({"temp": str(result.stdout)})
-    send_message(sock, json_string.encode("utf-8"))
-    logger.getChild("temp").debug(f"Sent back {json_string}")
-
-
-def handle_if_command(
-    command: dict, stop_event: threading.Event, sock: socket.socket, queue: queue.Queue
-) -> None:
-    global show_fps
-    # Define the logic to handle different commands
-    logger.debug(f"{command=}")
-    target_command = command.get("command", "error")
-    if target_command == "fill":
-        handle_fill(command["args"], queue)
-    elif target_command == "off":
-        handle_fill([0, 0, 0], queue)
-    elif target_command == "single":
-        handle_one(command["args"], queue)
-        pass
-    elif target_command == "list":
-        # handle_list(command['args'])
-        pass
-    elif target_command == "addlist":
-        # handle_add_list(command["args"])
-        pass
-    elif target_command == "get_log":
-        handle_get_logs(command["args"], sock)
-    elif target_command == "show_df":
-        handle_show_df(command["args"], sock, queue)
-    elif target_command == "loadfile":
-        handle_file(command["args"], queue)
-        pass
-    elif target_command == "brightness":
-        handle_brightness(command["args"])
-    elif target_command == "get_list_of_files":
-        handle_getting_list_of_files(command["args"], sock)
-    elif target_command == "temp":
-        handle_getting_temp(command["args"], sock)
-    elif target_command == "fps":
-        handle_fps(command["args"])
-    elif target_command == "toggle_fps":
-        show_fps = not show_fps
-    elif target_command == "pause":
-        handle_fps(0)
-    elif target_command == "stop":
-        stop_event.set()
-    elif target_command == "error":
-        logger.getChild("handle_commands").error(
-            f"Caught a dictionary error. The command parameter is invalid. {command=}"
-        )
-
-
 def log_when_functions_start_and_stop(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
@@ -222,9 +115,9 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     df_rows, df_columns = input_df.shape
     results = [None] * df_rows
     for index, row in input_df.iterrows():
-        row_list = [None] * led_num
+        row_list = [None] * config.led_num
 
-        for pixel_num in range(led_num):
+        for pixel_num in range(config.led_num):
             row_list[pixel_num] = (  # type: ignore
                 row[f"G_{pixel_num}"],
                 row[f"R_{pixel_num}"],
@@ -243,10 +136,10 @@ def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
     df_rows, df_columns = input_df.shape
     results = [None] * df_rows
     for index, row in input_df.iterrows():
-        row_list = [None] * led_num
+        row_list = [None] * config.led_num
 
-        for pixel_num in range(led_num):
-            row_list[pixel_num] = rgb_to_int(
+        for pixel_num in range(config.led_num):
+            row_list[pixel_num] = rgb_to_int( # type: ignore
                 row[f"R_{pixel_num}"], row[f"G_{pixel_num}"], row[f"B_{pixel_num}"]
             )
 
@@ -256,49 +149,44 @@ def convert_df_to_list_of_ints(input_df: pd.DataFrame) -> list[list[tuple]]:
     return results  # type: ignore
 
 
-def convert_df_to_byte_array(input_df: pd.DataFrame) -> list[bytes]:
-    # this takes in a dataframe and formats the bytes to be sent out
-    pass
-
-
 @log_when_functions_start_and_stop
 def running_with_standard_file(
-    stop_event: threading.Event, working_queue: queue.Queue
+    stop_event: threading.Event, display_queue: queue.Queue
 ) -> None:
-    global pixels, led_num, show_fps
+    global pixels
     local_logger = logger.getChild("running")
-    working_df = current_df_sequence
+    working_df = pd.DataFrame(0, index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_ints(working_df)
     while not stop_event.is_set():
-        if not working_queue.empty():
+        if not display_queue.empty():
             try:
-                working_df = working_queue.get()
+                working_df = display_queue.get()
                 local_logger.info("Changing to new df")
                 fast_array = convert_df_to_list_of_tuples(working_df)
             except queue.Empty as e:
                 pass
 
         for row in fast_array:
-            if stop_event.is_set() or not working_queue.empty():
+            if stop_event.is_set() or not display_queue.empty():
                 break
             time1 = time.time()
-            pixels[0:led_num] = row[0:led_num]
+            pixels[0:config.led_num] = row[0:config.led_num]
             time2 = time.time()
             pixels.show()
             time3 = time.time()
             loop_time = time3 - time1
-            fps_time = 1.0 / fps
+            fps_time = 1.0 / config.fps
             sleep_time = fps_time - loop_time
             if sleep_time < 0:
                 sleep_time = 0
-            while fps == 0:
+            while config.fps == 0:
                 time.sleep(0.5)
             else:
                 time.sleep(sleep_time)
             time4 = time.time()
             # Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
             # lets get that loading array down
-            if show_fps:
+            if config.show_fps:
                 packing_the_pixels = time2 - time1
                 pushing_the_pixels = time3 - time2
                 sleeping_time = time4 - time3
@@ -313,14 +201,15 @@ def handle_received_data(
     received_data: str,
     stop_event: threading.Event,
     sock: socket.socket,
-    queue: queue.Queue,
+    web_command_queue: queue.Queue,
 ) -> None:
     try:
         command = json.loads(received_data)
-        # logger.getChild("received_data").debug(f"{type(command)=} {command=}")
         if type(command) == str:
             raise TypeError
-        handle_if_command(command, stop_event, sock, queue)
+        command["socket"] = sock
+        web_command_queue.put(command)
+        # handle_if_command(command, stop_event, sock, web_command_queue)
     except json.JSONDecodeError as JDE:
         logger.error(
             f"{JDE}\n\nInvalid JSON format. Please provide valid JSON data.\n{received_data=}"
@@ -378,29 +267,33 @@ def start_server(
 
 
 if __name__ == "__main__":
-    host = "192.168.4.205"
-    port = 12345  # Change this to the desired port number
+
     stop_event.clear()
 
     web_server_thread = threading.Thread(
-        target=start_server, args=(host, port, stop_event, shared_queue)
+        target=start_server, args=(config.host, config.rx_port, stop_event, shared_web_command_queue)
+    )
+
+    handle_web_command_thread = threading.Thread(
+        target=handle_commands, args=(shared_web_command_queue, display_queue, stop_event)
     )
 
     running_thread = threading.Thread(
-        target=running_with_standard_file, args=(stop_event, shared_queue)
+        target=running_with_standard_file, args=(stop_event, display_queue)
     )
 
     # Start the threads
     web_server_thread.start()
+    handle_web_command_thread.start()
     running_thread.start()
 
     try:
         while True:
             time.sleep(120)
             logger.getChild("main_loop").info("press ctrl+c to stop")
-            log_capture.truncate(10_000)
     except KeyboardInterrupt:
         stop_event.set()
         web_server_thread.join()
+        handle_web_command_thread.join()
         running_thread.join()
     logger.info("Application Stopped")
