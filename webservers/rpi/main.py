@@ -78,7 +78,7 @@ if __name__ == "__main__":
     running_thread.start()
 
     try:
-        while stop_event.is_set():
+        while not stop_event.is_set():
             time.sleep(120)
             logger.getChild("main_loop").info("press ctrl+c to stop")
             config.log_capture.truncate(100_000)
