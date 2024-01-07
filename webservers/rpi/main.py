@@ -19,7 +19,14 @@ from pathlib import Path
 import os
 import sys
 
+from settings_manager import SettingsManager
+
+# Initialize the settings manager
+settings_manager = SettingsManager()
+settings_manager.set_setting("fps", "15")
+
 from handle_web_commands import handle_file, handle_fill, handle_one
+
 
 show_fps: bool = False
 
@@ -66,12 +73,6 @@ def handle_get_logs(args, sock: socket.socket):
     send_message(sock, json.dumps(log_capture.getvalue()).encode("utf-8"))
 
 
-
-
-
-
-
-
 def handle_fps(args):
     global fps
     try:
@@ -85,7 +86,6 @@ def handle_fps(args):
         logger.getChild("fps").warning(
             f"Tried to set the FPS to {args=}, this needs to be a number."
         )
-
 
 
 def handle_brightness(args) -> None:
@@ -285,13 +285,6 @@ def running_with_standard_file(
                 break
             time1 = time.time()
             pixels[0:led_num] = row[0:led_num]
-            # for pixel_num in range(led_num):
-            #     # Loading Array:0.034s
-            #     # looping 500 times means 68uS per loop
-            #     # local_logger.debug(f"Trying to set id {pixel_num} to {row}")
-            #     color = row[pixel_num]
-            #     pixels[pixel_num] = (color[0], color[1], color[2])
-            #     # local_logger.debug(f"set id {pixel_num} to {row}")
             time2 = time.time()
             pixels.show()
             time3 = time.time()
@@ -305,11 +298,16 @@ def running_with_standard_file(
             else:
                 time.sleep(sleep_time)
             time4 = time.time()
-            # when at 30 FPS its at  Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
+            # Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
             # lets get that loading array down
             if show_fps:
+                packing_the_pixels = time2 - time1
+                pushing_the_pixels = time3 - time2
+                sleeping_time = time4 - time3
+                total_time = time4 - time1
+                total_fps = 1 / total_time
                 local_logger.debug(
-                    f"Loading Array:{time2-time1:.3f}s Pushing Pixels:{time3-time2:.3f}s sleeping:{time4-time3:.3f}s actual_FPS:{1/(time4-time1):.3f}"
+                    f"Loading Array:{packing_the_pixels:.3f}s Pushing Pixels:{pushing_the_pixels:.3f}s sleeping:{sleeping_time:.3f}s actual_FPS:{total_fps:.3f}"
                 )
 
 
