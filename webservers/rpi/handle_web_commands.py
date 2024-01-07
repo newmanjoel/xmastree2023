@@ -125,7 +125,11 @@ def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -
 
     # going to assume this is in order
     # note that the rows and columns are one based and not zero based
-    current_row, current_column = config.current_dataframe.shape  # type: ignore
+    working_df: pd.DataFrame = config.current_dataframe  # type: ignore
+    if "FRAME_ID" in working_df.columns:
+        working_df = working_df.drop("FRAME_ID", axis=1)
+
+    current_row, current_column = working_df.shape
 
     if len(value) != current_column:
         logger.getChild("add_list").warning(
