@@ -111,7 +111,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
 
     raw_data = working_df.to_numpy()
     local_logger.debug(f"{raw_data}")
-    results = [0] * df_rows
+    results = [[0]] * df_rows
     for row_index, row in enumerate(raw_data):
         row_list = [0] * config.led_num
 
@@ -120,10 +120,11 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
                 row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
             )
 
-        results[row_index] = row_list  # type: ignore
+        results[row_index] = row_list
+        local_logger.debug(f"{row_list}")
     local_logger.debug("ending conversion")
     # local_logger.debug(f"\n{results}")
-    return results  # type: ignore
+    return results
 
 
 @log_when_functions_start_and_stop
