@@ -10,6 +10,7 @@ from common.file_parser import grb_to_int
 from common.common_objects import (
     all_standard_column_names,
     log_when_functions_start_and_stop,
+    setup_common_logger,
 )
 
 # used for pushing the data out
@@ -17,6 +18,7 @@ import board  # type: ignore
 import neopixel  # type: ignore
 
 logger = logging.getLogger("display")
+logger = setup_common_logger(logger)
 column_names = all_standard_column_names(config.led_num)
 
 
