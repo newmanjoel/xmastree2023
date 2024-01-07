@@ -51,6 +51,10 @@ def rgb_to_int(r: int, g: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
 
+def grb_to_int(r: int, g: int, b: int) -> int:
+    return int((r << 16) | (g << 8) | b)
+
+
 def read_GIFT_file(file_path: Path) -> tuple[list[Led_Location], pd.DataFrame]:
     df = pd.read_csv(file_path, names=["x", "y", "z"])
 

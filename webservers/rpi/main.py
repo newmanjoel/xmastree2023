@@ -34,7 +34,7 @@ sys.path.append(webservers_directory)
 import common.common_send_recv as common_send_recv
 from common.common_send_recv import receive_message
 from common.common_objects import setup_common_logger
-from common.file_parser import rgb_to_int
+from common.file_parser import rgb_to_int, grb_to_int
 from handle_web_commands import handle_commands, column_names
 
 common_send_recv.verbose = True
@@ -116,7 +116,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     for row_index, row in enumerate(raw_data):
         row_list = [0] * config.led_num
         for pixel_num in range(0, df_columns, 3):
-            row_list[pixel_num // 3] = rgb_to_int(
+            row_list[pixel_num // 3] = grb_to_int(
                 row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
             )
         results[row_index] = row_list
