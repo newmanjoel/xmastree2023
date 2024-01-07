@@ -128,6 +128,24 @@ def addRandomColor():
         random.randint(0, 255),
     ]
 
+    data = {"command": "addlist", "args": [random_color] * 500}
+    # json_data = json.dumps(data)
+    send_dict_to_rpi(data)
+    logger.getChild("addRandomColor").info(
+        f"added the color {random_color} to the current sequence"
+    )
+
+
+@app.post("/fillWithRandomColor")
+def fillWithRandomColor():
+    """add a random color to the existing sequence"""
+
+    random_color = [
+        random.randint(0, 255),
+        random.randint(0, 255),
+        random.randint(0, 255),
+    ]
+
     data = {"command": "fill", "args": random_color}
     # json_data = json.dumps(data)
     send_dict_to_rpi(data)

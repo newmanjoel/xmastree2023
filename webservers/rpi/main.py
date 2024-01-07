@@ -131,7 +131,8 @@ def running_with_standard_file(
     while not stop_event.is_set():
         if not display_queue.empty():
             try:
-                working_df = display_queue.get()
+                working_df: pd.DataFrame = display_queue.get()
+                config.current_dataframe = working_df
                 local_logger.info("Changing to new df")
                 fast_array = convert_df_to_list_of_tuples(working_df)
             except queue.Empty as e:

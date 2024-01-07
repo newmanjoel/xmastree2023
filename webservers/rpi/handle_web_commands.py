@@ -123,18 +123,18 @@ def handle_add_list(*, value: list[int], display_queue: queue.Queue, **kwargs) -
         )
         return
 
-    if len(value) != config.led_num:
+    # going to assume this is in order
+    # note that the rows and columns are one based and not zero based
+    current_row, current_column = config.current_dataframe.shape  # type: ignore
+
+    if len(value) != current_column - 1:
         logger.getChild("add_list").warning(
-            f"needed a list of len({config.led_num}), but got {len(value)} of {value=}"
+            f"needed a list of len({current_column-1}), but got {len(value)} of {value=}"
         )
         return
 
-    # going to assume this is in order
-    # note that the rows and columns are one based and not zero based
-    # current_row, current_column = current_df_sequence.shape
-
-    # current_df_sequence.loc[current_row] = value
-    # display_queue.put(current_df_sequence)
+    config.current_dataframe.loc[current_row] = value  # type: ignore
+    display_queue.put(config.current_dataframe)
 
 
 def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
@@ -198,6 +198,7 @@ all_commands = {
     "get_log": handle_get_logs,
     "toggle_fps": toggle_fps,
     "stop": set_stop_event,
+    "addlist": handle_add_list,
 }
 
 
