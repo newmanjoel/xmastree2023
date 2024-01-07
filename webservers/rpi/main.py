@@ -104,7 +104,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug("starting conversion")
     working_df = input_df.copy(deep=True)
     if "FRAME_ID" in working_df.columns:
-        working_df = working_df.drop("FRAME_ID")
+        working_df = working_df.drop("FRAME_ID", axis=1)
     df_rows, df_columns = working_df.shape
     local_logger.debug(f"{working_df.shape=}")
 
