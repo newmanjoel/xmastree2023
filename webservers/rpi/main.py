@@ -6,6 +6,8 @@ import logging
 import threading
 import queue
 
+import numpy as np
+
 import board  # type: ignore
 import neopixel  # type: ignore
 
@@ -107,7 +109,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
         working_df = working_df.drop("FRAME_ID", axis=1)
     working_df.reindex(column_names, axis=1)
     df_rows, df_columns = working_df.shape
-    raw_data = working_df.to_numpy(dtype="int8")
+    raw_data = working_df.to_numpy(dtype=np.ubyte)
     results = [[0]] * df_rows
     for row_index, row in enumerate(raw_data):
         row_list = [0] * config.led_num
