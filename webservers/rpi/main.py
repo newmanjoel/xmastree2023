@@ -100,10 +100,10 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
 
 @log_when_functions_start_and_stop
 def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
-    local_logger = logger.getChild("c_df_2_ints")
+    local_logger = logger.getChild("c_df_2_ints_speedy")
     local_logger.debug("starting conversion")
     working_df = input_df.copy(deep=True)
-    working_df = working_df.drop("FRAME_ID")
+    # working_df = working_df.drop("FRAME_ID")
     df_rows, df_columns = working_df.shape
     local_logger.debug(f"{working_df.shape=}")
 
