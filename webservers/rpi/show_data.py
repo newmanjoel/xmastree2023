@@ -24,7 +24,7 @@ column_names = all_standard_column_names(config.led_num)
 
 def setup() -> neopixel.NeoPixel:
     # set up the leds
-    pixels = neopixel.NeoPixel(board.D12, config.led_num, auto_write=False)
+    pixels = neopixel.NeoPixel(board.D10, config.led_num, auto_write=False)
     pixels.fill((100, 100, 100))
     pixels.show()
 
