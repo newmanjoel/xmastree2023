@@ -132,7 +132,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug(
         f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
     )
-    return results
+    return results.tolist()
 
 
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
