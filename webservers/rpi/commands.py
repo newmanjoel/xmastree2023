@@ -1,3 +1,4 @@
+from numpy import ubyte
 import pandas as pd
 
 import threading
@@ -185,7 +186,7 @@ def handle_file(*, value: str, display_queue: queue.Queue, **kwargs):
     results = None
 
     start = time.time()
-    results = pd.read_csv(file_path)
+    results = pd.read_csv(file_path, dtype=ubyte)
     end = time.time()
     local_logger.debug(f"loaded the file to a dataframe and it took {end-start:0.3f}s")
 
