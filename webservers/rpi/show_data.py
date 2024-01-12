@@ -107,7 +107,7 @@ def cashe_all_ints() -> None:
     import itertools as it
 
     for color in it.combinations_with_replacement(range(0, 256), 3):
-        grb_to_int(color)
+        grb_to_int(color[0], color[1], color[2])
 
 
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
