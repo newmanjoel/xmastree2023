@@ -24,7 +24,7 @@ column_names = all_standard_column_names(config.led_num)
 
 def setup() -> neopixel.NeoPixel:
     # set up the leds
-    pixels = neopixel.NeoPixel(board.D10, config.led_num, auto_write=False)
+    pixels = neopixel.NeoPixel(board.D12, config.led_num, auto_write=False)
     pixels.fill((100, 100, 100))
     pixels.show()
 
@@ -50,11 +50,14 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug("starting conversion")
     start_time = time.time()
     working_df = input_df.copy(deep=True)
+    time_2 = time.time()
     working_df = sanitize_column_names(working_df)
     working_df.reindex(column_names, axis=1)
     df_rows, df_columns = working_df.shape
+    time_3 = time.time()
     raw_data = working_df.to_numpy(dtype=np.ubyte)
     results = [[0]] * df_rows
+    time_4 = time.time()
     for row_index, row in enumerate(raw_data):
         row_list = [0] * config.led_num
         for pixel_num in range(0, df_columns, 3):
@@ -63,6 +66,16 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
             )
         results[row_index] = row_list
     end_time = time.time()
+
+    copy_time = time_2 - start_time
+    clean_time = time_3 - time_2
+    unit_change_time = time_4 - time_3
+    enumerate_time = end_time - time_4
+    total_time = end_time - start_time
+
+    local_logger.debug(
+        f"{copy_time:0.5f=} {clean_time:0.5f=} {unit_change_time:0.5f=} {enumerate_time:0.5f=} {total_time:0.5f=}"
+    )
     local_logger.debug(
         f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
     )
