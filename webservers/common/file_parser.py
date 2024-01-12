@@ -2,6 +2,7 @@
 from pathlib import Path
 
 import pandas as pd
+from numba import jit, uint8, uint32
 
 try:
     from common_objects import (
@@ -51,6 +52,7 @@ def rgb_to_int(r: int, g: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
 
+@jit(uint32(uint8, uint8, uint8), cache=True)
 def grb_to_int(g: int, r: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 

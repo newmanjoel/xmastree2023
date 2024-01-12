@@ -58,12 +58,16 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     raw_data = working_df.to_numpy(dtype=np.ubyte)
     results = [[0]] * df_rows
     time_4 = time.time()
+    led_num = config.led_num
     for row_index, row in enumerate(raw_data):
-        row_list = [0] * config.led_num
+        row_list = [0] * led_num
+        # TODO: numpy apply function to speed this up
         for pixel_num in range(0, df_columns, 3):
-            row_list[pixel_num // 3] = grb_to_int(
+            led_pixel_index = pixel_num // 3
+            led_pixel_color = grb_to_int(
                 row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
             )
+            row_list[led_pixel_index] = led_pixel_color
         results[row_index] = row_list
     end_time = time.time()
 
@@ -72,6 +76,9 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     unit_change_time = time_4 - time_3
     enumerate_time = end_time - time_4
     total_time = end_time - start_time
+
+    # Benchmark
+    # copy:0.01650 clean:0.04447 types:0.00295 looping:7.64509 total:7.70900
 
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
