@@ -104,23 +104,10 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     return results.tolist()
 
 
-def cashe_all_ints() -> None:
-    import itertools as it
-
-    for color in it.combinations_with_replacement(range(0, 256), 3):
-        grb_to_int(color[0], color[1], color[2])
-
-
-log_when_functions_start_and_stop(func=cashe_all_ints, logger=logger)
-
-
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
     global pixels
     local_logger = logger.getChild("running")
     local_logger.info("Starting")
-    # cashing all of the conversion of ints to colors saves a LOT of time
-    cashe_all_ints()
-    local_logger.info("Cached")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_int_speedy(working_df)
