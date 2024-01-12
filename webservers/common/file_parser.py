@@ -53,7 +53,7 @@ def rgb_to_int(r: int, g: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
 
-@lru_cache(maxsize=128, typed=False)
+@lru_cache(maxsize=16777216, typed=False)
 def grb_to_int(g: int, r: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
