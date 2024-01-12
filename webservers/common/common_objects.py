@@ -31,12 +31,14 @@ def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     return logger
 
 
-def log_when_functions_start_and_stop(func):
+def log_when_functions_start_and_stop(
+    func, logger: logging.Logger = logging.getLogger("")
+):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        logging.getLogger(func.__name__).debug(f"Function {func.__name__} started.")
+        logger.getChild(func.__name__).debug(f"Function {func.__name__} started.")
         result = func(*args, **kwargs)
-        logging.getLogger(func.__name__).debug(f"Function {func.__name__} ended.")
+        logger.getChild(func.__name__).debug(f"Function {func.__name__} ended.")
         return result
 
     return wrapper
