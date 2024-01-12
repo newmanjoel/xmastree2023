@@ -59,7 +59,9 @@ def grb_to_int_fast(color: list[int]) -> int:
     return int((color[1] << 16) | (color[0] << 8) | color[2])
 
 
-def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
+def convert_row_to_ints(
+    input_row: list[int], number_of_columns: int = 1500
+) -> list[int]:
     # time1 = time.time()
     return_list = [0] * (number_of_columns // 3)
     # time2 = time.time()
@@ -104,6 +106,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     time_4 = time.time()
     led_num = config.led_num
     results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
+    local_logger.debug(f"{results=}")
     # for row_index, row in enumerate(raw_data):
     #     row_list = [0] * led_num
     #     row_list = convert_row_to_ints(row, df_columns)
