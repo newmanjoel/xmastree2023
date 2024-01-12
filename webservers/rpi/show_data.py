@@ -60,15 +60,15 @@ def grb_to_int_fast(color: list[int]) -> int:
 
 
 def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
-    time1 = time.time()
+    # time1 = time.time()
     return_list = [0] * (number_of_columns // 3)
-    time2 = time.time()
+    # time2 = time.time()
 
     reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
-    time3 = time.time()
+    # time3 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{reshaped_data=}")
     return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
-    time4 = time.time()
+    # time4 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
     # for pixel_num in range(0, number_of_columns, 3):
@@ -79,11 +79,11 @@ def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[in
     #     return_list[led_pixel_index] = led_pixel_color
 
     return_list = list(map(int, return_list))
-    time5 = time.time()
+    # time5 = time.time()
 
-    logger.getChild("convert_row_to_ints").debug(
-        f"{time2-time1:0.6f} {time3-time2:0.6f} {time4-time3:0.6f} {time5-time4:0.6f}"
-    )
+    # logger.getChild("convert_row_to_ints").debug(
+    #     f"{time2-time1:0.6f} {time3-time2:0.6f} {time4-time3:0.6f} {time5-time4:0.6f}"
+    # )
     # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
     return return_list
@@ -103,10 +103,11 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     results = [[0]] * df_rows
     time_4 = time.time()
     led_num = config.led_num
-    for row_index, row in enumerate(raw_data):
-        row_list = [0] * led_num
-        row_list = convert_row_to_ints(row, df_columns)
-        results[row_index] = row_list
+    results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
+    # for row_index, row in enumerate(raw_data):
+    #     row_list = [0] * led_num
+    #     row_list = convert_row_to_ints(row, df_columns)
+    #     results[row_index] = row_list
     end_time = time.time()
 
     copy_time = time_2 - start_time
