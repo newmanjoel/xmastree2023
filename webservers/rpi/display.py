@@ -50,7 +50,8 @@ def setup() -> PixelStrip:
         LED_CHANNEL,
         LED_STRIP,
     )
-    pixels.fill((100, 100, 100))
+    pixels.begin()
+    pixels[0 : config.led_num] = 0
     pixels.show()
 
     config.pixels = pixels
