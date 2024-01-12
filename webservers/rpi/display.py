@@ -54,7 +54,7 @@ def setup() -> PixelStrip:
     pixels[0 : config.led_num] = 0
     pixels.show()
 
-    config.frame_rate_arr = np.zeros((1, 1000), dtype=np.float64)
+    config.frame_rate_arr = np.zeros(1000, dtype=np.float64)
 
     config.pixels = pixels
     return pixels
