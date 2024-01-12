@@ -60,11 +60,15 @@ def grb_to_int_fast(color: list[int]) -> int:
 
 
 def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
+    time1 = time.time()
     return_list = [0] * (number_of_columns // 3)
+    time2 = time.time()
 
     reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
+    time3 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{reshaped_data=}")
     return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
+    time4 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
     # for pixel_num in range(0, number_of_columns, 3):
@@ -73,7 +77,13 @@ def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[in
     #         input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
     #     )
     #     return_list[led_pixel_index] = led_pixel_color
+
     return_list = list(map(int, return_list))
+    time5 = time.time()
+
+    logger.getChild("convert_row_to_ints").debug(
+        f"{time2-time1:0.6f} {time3-time2:0.6f} {time4-time3:0.6f} {time5-time4:0.6f}"
+    )
     # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
     return return_list
@@ -95,7 +105,6 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     led_num = config.led_num
     for row_index, row in enumerate(raw_data):
         row_list = [0] * led_num
-        # TODO: numpy apply function to speed this up
         row_list = convert_row_to_ints(row, df_columns)
         results[row_index] = row_list
     end_time = time.time()
@@ -110,6 +119,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     # copy:0.01650 clean:0.04447 types:0.00295 looping:7.64509 total:7.70900
     # after cashing the grb_to_int function
     # copy:0.01680 clean:0.04479 types:0.00313 looping:3.85402 total:3.91874
+    # after using numpy apply along axis
+    # copy:0.01663 clean:0.04498 types:0.00311 looping:11.00467 total:11.06938
 
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
