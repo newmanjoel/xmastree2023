@@ -71,13 +71,13 @@ def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
     return return_df
 
 
-def convert_row_to_ints(
+def convert_row_to_color(
     input_row: list[int], number_of_columns: int = 1500
-) -> list[int]:
+) -> list[Color]:
     return_list = [0] * (number_of_columns // 3)
     for pixel_num in range(0, number_of_columns, 3):
         led_pixel_index = pixel_num // 3
-        led_pixel_color = grb_to_int(
+        led_pixel_color = Color(
             input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
         )
         return_list[led_pixel_index] = led_pixel_color
@@ -98,7 +98,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     results = [[0]] * df_rows
     time_4 = time.time()
 
-    results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
+    results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
     returned_list = results.tolist()
     end_time = time.time()
 
