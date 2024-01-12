@@ -74,7 +74,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     total_time = end_time - start_time
 
     local_logger.debug(
-        f"{copy_time:0.5f=} {clean_time:0.5f=} {unit_change_time:0.5f=} {enumerate_time:0.5f=} {total_time:0.5f=}"
+        f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
     )
     local_logger.debug(
         f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
