@@ -1,3 +1,4 @@
+from functools import lru_cache
 import logging
 import re
 import pandas as pd
@@ -54,6 +55,7 @@ def batched(iterable, n):
         yield batch
 
 
+@lru_cache(maxsize=128)
 def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
     return_list = [0] * (number_of_columns // 3)
     for pixel_num in range(0, number_of_columns, 3):
