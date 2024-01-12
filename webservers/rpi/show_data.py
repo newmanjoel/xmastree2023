@@ -1,4 +1,3 @@
-from functools import lru_cache
 import logging
 import re
 import pandas as pd
@@ -6,7 +5,7 @@ import numpy as np
 import time
 import threading
 import queue
-import itertools as it
+
 import config
 from common.file_parser import grb_to_int
 from common.common_objects import (
@@ -46,52 +45,21 @@ def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
     return return_df
 
 
-def batched(iterable, n):
-    # batched('ABCDEFG', 3) --> ABC DEF G
-    if n < 1:
-        raise ValueError("n must be at least one")
-    it = iter(iterable)
-    while batch := tuple(it.islice(it, n)):
-        yield batch
-
-
-def grb_to_int_fast(color: list[int]) -> int:
-    return int((color[1] << 16) | (color[0] << 8) | color[2])
-
-
 def convert_row_to_ints(
     input_row: list[int], number_of_columns: int = 1500
 ) -> list[int]:
-    # time1 = time.time()
     return_list = [0] * (number_of_columns // 3)
-    # time2 = time.time()
-
-    # reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
-    # time3 = time.time()
-    # logger.getChild("convert_row_to_ints").debug(f"{reshaped_data=}")
-    # return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
-    # time4 = time.time()
-    # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
-
     for pixel_num in range(0, number_of_columns, 3):
         led_pixel_index = pixel_num // 3
         led_pixel_color = grb_to_int(
             input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
         )
         return_list[led_pixel_index] = led_pixel_color
-
-    # time5 = time.time()
-
-    # logger.getChild("convert_row_to_ints").debug(
-    #     f"{time2-time1:0.6f} {time3-time2:0.6f} {time4-time3:0.6f} {time5-time4:0.6f}"
-    # )
-    # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
-
     return return_list
 
 
 def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
-    local_logger = logger.getChild("c_df_2_ints_speedy")
+    local_logger = logger.getChild("df_2_int")
     local_logger.debug("starting conversion")
     start_time = time.time()
     working_df = input_df.copy(deep=True)
@@ -103,12 +71,11 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     raw_data = working_df.to_numpy(dtype=np.ubyte)
     results = [[0]] * df_rows
     time_4 = time.time()
-    led_num = config.led_num
 
-    for row_index, row in enumerate(raw_data):
-        row_list = [0] * led_num
-        row_list = convert_row_to_ints(row, df_columns)
-        results[row_index] = row_list
+    results = np.apply_along_axis(
+        convert_row_to_ints, 1, raw_data, number_of_columns=df_columns
+    )
+
     end_time = time.time()
 
     copy_time = time_2 - start_time
@@ -128,13 +95,12 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     # using np.apply_+along_axis for rows and cashed looping ints
     # copy:0.01702 clean:0.04490 types:0.00296 looping:4.00124 total:4.06612
 
+    # using the np.apply_along_axis for rows and cashed looping ints as that seems to cleanest/fastest combo
+
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
     )
-    local_logger.debug(
-        f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
-    )
-    return results
+    return results.tolist()
 
 
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
