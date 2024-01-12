@@ -185,6 +185,18 @@ def get_rpi_temp():
     return json_text
 
 
+@app.get("/get_fps")
+def get_fps_arr():
+    """get the last bunch of FPS"""
+    data = {"command": "get_fps", "args": ""}
+    json_data = json.dumps(data)
+    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+        send_message(connection_to_rpi, json_data.encode("utf-8"))
+        json_bytes = receive_message(connection_to_rpi)
+        json_text = json.loads(json_bytes.decode("utf-8"))
+    return json_text
+
+
 @app.get("/get_current_df")
 def get_current_df():
     """get the currently displayed dataframe"""

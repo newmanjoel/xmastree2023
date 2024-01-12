@@ -54,6 +54,8 @@ def setup() -> PixelStrip:
     pixels[0 : config.led_num] = 0
     pixels.show()
 
+    config.frame_rate_arr = np.zeros((1, 1000), dtype=np.float64)
+
     config.pixels = pixels
     return pixels
 
@@ -158,6 +160,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 pixels[led_pixel_index] = row[led_pixel_index]
             time2 = time.time()
             pixels.show()
+            config.frame_rate_arr = np.roll(config.frame_rate_arr, 1)
             time3 = time.time()
             loop_time = time3 - time1
             fps_time = 1.0 / config.fps
@@ -169,14 +172,16 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
             else:
                 time.sleep(sleep_time)
             time4 = time.time()
+
+            total_time = time4 - time1
+            total_fps = 1 / total_time
+            config.frame_rate_arr[0] = total_fps
             # Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
             # Loading Array:0.007s Pushing Pixels:0.019s sleeping:0.000s actual_FPS:38.318
             if config.show_fps:
                 packing_the_pixels = time2 - time1
                 pushing_the_pixels = time3 - time2
                 sleeping_time = time4 - time3
-                total_time = time4 - time1
-                total_fps = 1 / total_time
                 local_logger.debug(
                     f"Loading Array:{packing_the_pixels:.3f}s Pushing Pixels:{pushing_the_pixels:.3f}s sleeping:{sleeping_time:.3f}s actual_FPS:{total_fps:.3f}"
                 )

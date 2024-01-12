@@ -61,6 +61,14 @@ def handle_getting_temp(*, send_back, send_queue: queue.Queue, **kwargs) -> None
     logger.getChild("temp").debug(f"Sent back {json_string}")
 
 
+def handle_getting_last_fps(*, send_back, send_queue: queue.Queue, **kwargs) -> None:
+    """send back the last bit of FPS that we have had"""
+    json_string = json.dumps({"fps": config.frame_rate_arr.tolist()})  # type: ignore
+    data = json_string.encode("utf-8")
+    send_queue.put((send_back, data))
+    logger.getChild("fps_dump").debug(f"Sent back {json_string}")
+
+
 def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
     # converts RGB into a GRB hex
     if type(value) != list:
@@ -228,6 +236,7 @@ all_commands = {
     "addlist": handle_add_list,
     "get_current_df": handle_get_current_df,
     "verbose": handle_verbose_logging,
+    "get_fps": handle_getting_last_fps,
 }
 
 

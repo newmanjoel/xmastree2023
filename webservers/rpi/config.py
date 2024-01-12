@@ -3,6 +3,7 @@ from io import StringIO
 
 fps: float = 10
 show_fps: bool = False
+frame_rate_arr: list[float] = []
 
 
 host: str = "192.168.4.205"
