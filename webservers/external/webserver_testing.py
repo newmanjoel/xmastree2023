@@ -15,13 +15,19 @@ from pathlib import Path
 import os
 import sys
 
+
 # Add the root directory to the Python path
 current_directory = os.path.dirname(os.path.abspath(__file__))
 webservers_directory = os.path.abspath(os.path.join(current_directory, ".."))
 sys.path.append(webservers_directory)
 
 from common.common_send_recv import send_message, receive_message
-from common.common_objects import setup_common_logger, all_standard_column_names
+from common.common_objects import (
+    setup_common_logger,
+    all_standard_column_names,
+    Led_Location,
+)
+from common.file_parser import read_GIFT_file, save_GIFT_file
 
 
 logger = logging.getLogger("light_driver")
@@ -34,6 +40,7 @@ led_num = 500
 fps = 5.0
 stop_event = threading.Event()
 stop_event.clear()
+all_points, _ = read_GIFT_file(Path("test_output.gift"))
 
 shared_queue = queue.Queue()
 
@@ -177,6 +184,39 @@ def handle_add_list(args, queue: queue.Queue) -> None:
         queue.put(current_df_sequence)
 
 
+def handle_move_point(args) -> None:
+    local_logger = logger.getChild("move_point")
+    id = int(args[0])
+    working_point = all_points[id]
+    local_logger.debug(f"changed {working_point=}")
+    working_point.x = float(args[1])
+    working_point.y = float(args[2])
+    working_point.z = float(args[3])
+    all_points[id] = working_point
+    local_logger.debug(f"to {working_point=}")
+
+
+def handle_draw_plane(args, queue: queue.Queue) -> None:
+    local_logger = logger.getChild("draw_plane")
+    axis = args[0]  # should be x,y,z
+    value = float(args[1])  # value for the axis from the zero point
+    color_r = int(args[2])
+    color_g = int(args[3])
+    color_b = int(args[4])
+    tolerance = float(args[5])
+
+    data = [0, 0, 0] * led_num
+    for point in all_points:
+        if (point.x - value) > tolerance:
+            data[point.led_id] = color_r
+            data[point.led_id + 1] = color_g
+            data[point.led_id + 2] = color_b
+
+    with lock:
+        current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
+        queue.put(current_df_sequence)
+
+
 def handle_show_df(args, sock: socket.socket, queue: queue.Queue) -> None:
     # assuming that the data was created using the .to_json(orient='split') function
     local_logger = logger.getChild("show_df")
@@ -239,6 +279,10 @@ def handle_if_command(
         pass
     elif target_command == "brightness":
         handle_brightness(command["args"])
+    elif target_command == "move_point":
+        handle_move_point(command["args"])
+    elif target_command == "plane":
+        handle_draw_plane(command["args"], queue)
     elif target_command == "get_list_of_files":
         handle_getting_list_of_files(command["args"], sock)
     elif target_command == "temp":

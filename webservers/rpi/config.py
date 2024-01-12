@@ -12,6 +12,7 @@ log_capture: StringIO = StringIO()
 
 
 led_num: int = 500
+led_pin: int = 12
 brightness: float = 1.0
 pixels = {}  # I dont like this
 current_dataframe = {}  # I dont like this
