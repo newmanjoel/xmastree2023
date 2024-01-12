@@ -160,7 +160,6 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 pixels[led_pixel_index] = row[led_pixel_index]
             time2 = time.time()
             pixels.show()
-            config.frame_rate_arr = np.roll(config.frame_rate_arr, 1)
             time3 = time.time()
             loop_time = time3 - time1
             fps_time = 1.0 / config.fps
@@ -175,6 +174,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
 
             total_time = time4 - time1
             total_fps = 1 / total_time
+            config.frame_rate_arr = np.roll(config.frame_rate_arr, 1)
             config.frame_rate_arr[0] = total_fps
             # Loading Array:0.034s Pushing Pixels:0.018s sleeping:0.000s actual_FPS:19.146
             # Loading Array:0.007s Pushing Pixels:0.019s sleeping:0.000s actual_FPS:38.318
