@@ -64,7 +64,7 @@ def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[in
 
     reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
     logger.getChild("convert_row_to_ints").debug(f"{reshaped_data=}")
-    return_list = np.apply_along_axis(grb_to_int_fast, 0, reshaped_data)
+    return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
     logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
     # for pixel_num in range(0, number_of_columns, 3):
