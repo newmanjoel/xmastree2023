@@ -117,7 +117,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
     local_logger = logger.getChild("running")
     local_logger.info("Starting")
     # cashing all of the conversion of ints to colors saves a LOT of time
-    cashe_all_ints()
+    # cashe_all_ints()
 
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
