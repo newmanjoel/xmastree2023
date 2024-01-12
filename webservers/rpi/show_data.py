@@ -120,7 +120,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
     local_logger.info("Starting")
     # cashing all of the conversion of ints to colors saves a LOT of time
     cashe_all_ints()
-
+    local_logger.info("Cached")
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_int_speedy(working_df)
