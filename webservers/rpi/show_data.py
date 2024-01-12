@@ -5,7 +5,7 @@ import numpy as np
 import time
 import threading
 import queue
-
+import itertools as it
 import config
 from common.file_parser import grb_to_int
 from common.common_objects import (
@@ -45,6 +45,26 @@ def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
     return return_df
 
 
+def batched(iterable, n):
+    # batched('ABCDEFG', 3) --> ABC DEF G
+    if n < 1:
+        raise ValueError("n must be at least one")
+    it = iter(iterable)
+    while batch := tuple(it.islice(it, n)):
+        yield batch
+
+
+def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
+    return_list = [0] * (number_of_columns // 3)
+    for pixel_num in range(0, number_of_columns, 3):
+        led_pixel_index = pixel_num // 3
+        led_pixel_color = grb_to_int(
+            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
+        )
+        return_list[led_pixel_index] = led_pixel_color
+    return return_list
+
+
 def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger = logger.getChild("c_df_2_ints_speedy")
     local_logger.debug("starting conversion")
@@ -62,12 +82,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     for row_index, row in enumerate(raw_data):
         row_list = [0] * led_num
         # TODO: numpy apply function to speed this up
-        for pixel_num in range(0, df_columns, 3):
-            led_pixel_index = pixel_num // 3
-            led_pixel_color = grb_to_int(
-                row[pixel_num], row[pixel_num + 1], row[pixel_num + 2]
-            )
-            row_list[led_pixel_index] = led_pixel_color
+        row_list = convert_row_to_ints(row, df_columns)
         results[row_index] = row_list
     end_time = time.time()
 
@@ -79,6 +94,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
 
     # Benchmark
     # copy:0.01650 clean:0.04447 types:0.00295 looping:7.64509 total:7.70900
+    # after cashing the grb_to_int function
+    # copy:0.01680 clean:0.04479 types:0.00313 looping:3.85402 total:3.91874
 
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"

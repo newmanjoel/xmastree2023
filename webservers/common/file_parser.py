@@ -48,6 +48,7 @@ def rgb_to_hex(r: int, g: int, b: int) -> str:
     return hex_color
 
 
+@lru_cache(maxsize=128, typed=False)
 def rgb_to_int(r: int, g: int, b: int) -> int:
     return int((r << 16) | (g << 8) | b)
 
