@@ -15,7 +15,7 @@ from common.common_objects import (
 )
 
 # used for pushing the data out
-from rpi_ws281x import Color, PixelStrip, ws
+from rpi_ws281x import Color, PixelStrip, ws, RGBW
 
 
 # LED strip configuration:
@@ -80,10 +80,10 @@ def convert_row_to_color(
     for pixel_num in range(0, number_of_columns, 3):
         led_pixel_index = pixel_num // 3
         # note that color takes in RGB and does not convert it to GRB, Lets do that here
-        led_pixel_color = Color(
+        led_pixel_color = grb_to_int(
             input_row[pixel_num + 1], input_row[pixel_num], input_row[pixel_num + 2]
         )
-        return_list[led_pixel_index] = led_pixel_color
+        return_list[led_pixel_index] = RGBW(led_pixel_color)
     return return_list
 
 
