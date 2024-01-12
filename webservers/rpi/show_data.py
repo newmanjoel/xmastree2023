@@ -104,12 +104,11 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     results = [[0]] * df_rows
     time_4 = time.time()
     led_num = config.led_num
-    results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
-    local_logger.debug(f"{results=}")
-    # for row_index, row in enumerate(raw_data):
-    #     row_list = [0] * led_num
-    #     row_list = convert_row_to_ints(row, df_columns)
-    #     results[row_index] = row_list
+
+    for row_index, row in enumerate(raw_data):
+        row_list = [0] * led_num
+        row_list = convert_row_to_ints(row, df_columns)
+        results[row_index] = row_list
     end_time = time.time()
 
     copy_time = time_2 - start_time
@@ -126,6 +125,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     # copy:0.01663 clean:0.04498 types:0.00311 looping:11.00467 total:11.06938
     # doubling down on numpy apply along axis
     # copy:0.01734 clean:0.04529 types:0.00298 looping:10.99190 total:11.05752
+    # using np.apply_+along_axis for rows and cashed looping ints
+    # copy:0.01702 clean:0.04490 types:0.00296 looping:4.00124 total:4.06612
 
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
@@ -133,7 +134,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug(
         f"ending conversion, it took {end_time-start_time:0.3f}s to convert the file"
     )
-    return results.tolist()
+    return results
 
 
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
