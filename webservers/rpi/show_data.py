@@ -66,21 +66,20 @@ def convert_row_to_ints(
     return_list = [0] * (number_of_columns // 3)
     # time2 = time.time()
 
-    reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
+    # reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
     # time3 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{reshaped_data=}")
-    return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
+    # return_list = np.apply_along_axis(grb_to_int_fast, 1, reshaped_data)
     # time4 = time.time()
     # logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
 
-    # for pixel_num in range(0, number_of_columns, 3):
-    #     led_pixel_index = pixel_num // 3
-    #     led_pixel_color = grb_to_int(
-    #         input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
-    #     )
-    #     return_list[led_pixel_index] = led_pixel_color
+    for pixel_num in range(0, number_of_columns, 3):
+        led_pixel_index = pixel_num // 3
+        led_pixel_color = grb_to_int(
+            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
+        )
+        return_list[led_pixel_index] = led_pixel_color
 
-    return_list = list(map(int, return_list))
     # time5 = time.time()
 
     # logger.getChild("convert_row_to_ints").debug(
@@ -125,6 +124,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     # copy:0.01680 clean:0.04479 types:0.00313 looping:3.85402 total:3.91874
     # after using numpy apply along axis
     # copy:0.01663 clean:0.04498 types:0.00311 looping:11.00467 total:11.06938
+    # doubling down on numpy apply along axis
+    # copy:0.01734 clean:0.04529 types:0.00298 looping:10.99190 total:11.05752
 
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
