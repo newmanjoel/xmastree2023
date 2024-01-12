@@ -55,15 +55,23 @@ def batched(iterable, n):
         yield batch
 
 
-@lru_cache(maxsize=128)
+def grb_to_int_fast(color: list[int]) -> int:
+    return int((color[1] << 16) | (color[0] << 8) | color[2])
+
+
 def convert_row_to_ints(input_row: list[int], number_of_columns: int) -> list[int]:
     return_list = [0] * (number_of_columns // 3)
-    for pixel_num in range(0, number_of_columns, 3):
-        led_pixel_index = pixel_num // 3
-        led_pixel_color = grb_to_int(
-            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
-        )
-        return_list[led_pixel_index] = led_pixel_color
+
+    reshaped_data = np.reshape(input_row, (number_of_columns // 3, 3))
+    return_list = np.apply_along_axis(grb_to_int_fast, 0, reshaped_data)
+    logger.getChild("convert_row_to_ints").debug(f"{return_list=}")
+
+    # for pixel_num in range(0, number_of_columns, 3):
+    #     led_pixel_index = pixel_num // 3
+    #     led_pixel_color = grb_to_int(
+    #         input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
+    #     )
+    #     return_list[led_pixel_index] = led_pixel_color
     return return_list
 
 
