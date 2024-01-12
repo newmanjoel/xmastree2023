@@ -73,9 +73,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     results = [[0]] * df_rows
     time_4 = time.time()
 
-    results = np.apply_along_axis(
-        convert_row_to_ints, 1, raw_data, number_of_columns=df_columns
-    )
+    results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
 
     end_time = time.time()
 
@@ -95,6 +93,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     # copy:0.01734 clean:0.04529 types:0.00298 looping:10.99190 total:11.05752
     # using np.apply_+along_axis for rows and cashed looping ints
     # copy:0.01702 clean:0.04490 types:0.00296 looping:4.00124 total:4.06612
+    # using np.apply_along_axis for frames and looping for rows and casheing all the colors
+    # copy:0.01617 clean:0.04324 types:0.00275 looping:2.50638 total:2.56854
 
     # using the np.apply_along_axis for rows and cashed looping ints as that seems to cleanest/fastest combo
 
