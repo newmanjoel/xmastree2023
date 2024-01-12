@@ -10,6 +10,7 @@ import config
 from common.file_parser import grb_to_int
 from common.common_objects import (
     all_standard_column_names,
+    log_when_functions_start_and_stop,
     setup_common_logger,
 )
 
@@ -103,6 +104,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     return results.tolist()
 
 
+@log_when_functions_start_and_stop
 def cashe_all_ints() -> None:
     import itertools as it
 
@@ -114,16 +116,13 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
     global pixels
     local_logger = logger.getChild("running")
     local_logger.info("Starting")
+    # cashing all of the conversion of ints to colors saves a LOT of time
+    cashe_all_ints()
+
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_int_speedy(working_df)
     led_amount = int(config.led_num)
-    start_cashe = time.time()
-    cashe_all_ints()
-    end_cashe = time.time()
-    local_logger.debug(
-        f"it took {end_cashe-start_cashe:0.3f}s to cashe every single color"
-    )
 
     while not stop_event.is_set():
         if not display_queue.empty():
