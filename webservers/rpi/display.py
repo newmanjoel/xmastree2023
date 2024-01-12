@@ -99,7 +99,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     time_4 = time.time()
 
     results = np.apply_along_axis(convert_row_to_ints, 1, raw_data)
-
+    returned_list = results.tolist()
     end_time = time.time()
 
     copy_time = time_2 - start_time
@@ -126,7 +126,9 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
     )
-    return results.tolist()
+    local_logger.debug(f"{type(returned_list)=} {type(results)=} {results.dtype=}")
+
+    return returned_list
 
 
 def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -> None:
