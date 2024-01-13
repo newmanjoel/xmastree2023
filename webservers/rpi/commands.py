@@ -86,7 +86,9 @@ def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
     color_b = int(value[2])
     data = [color_r, color_g, color_b] * config.led_num
 
-    current_df_sequence = pd.DataFrame([data], index=range(1), columns=column_names)
+    current_df_sequence = pd.DataFrame(
+        [data], index=range(1), columns=column_names, dtype=ubyte
+    )
     display_queue.put(current_df_sequence)
 
 
