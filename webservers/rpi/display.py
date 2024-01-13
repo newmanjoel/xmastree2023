@@ -14,6 +14,8 @@ from common.common_objects import (
 )
 
 # used for pushing the data out
+# https://github.com/rpi-ws281x/rpi-ws281x-python/blob/master/library/rpi_ws281x/rpi_ws281x.py
+# https://github.com/richardghirst/rpi_ws281x/blob/master/ws2811.c
 from rpi_ws281x import Color, PixelStrip, ws, RGBW
 
 
