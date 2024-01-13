@@ -290,6 +290,7 @@ def handle_commands(
                 send_queue=send_queue,
                 stop_event=stop_event,
             )
-        except:
+        except Exception as e:
+            local_logger.error(f"{e}")
             pass
     local_logger.info("Exiting")
