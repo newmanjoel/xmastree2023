@@ -27,14 +27,15 @@ print(f"{current_df_sequence}")
 color_array = [0] * led_num * 3
 color_ammount = 255
 fade_ammount = 1.0
-for i in range(0, 200, 3):
+for i in range(0, 80, 3):
     color_array[i] = int(color_ammount * fade_ammount)
     fade_ammount = fade_ammount * 0.8
-
+rolling_array = np.copy(color_array)
 sequence_start = time.time()
-for i in range(led_num + 50):
-    working_array = np.roll(color_array, shift=i * 3, axis=0)
-    working_df = pd.DataFrame(data=[working_array], columns=column_names)
+for i in range(led_num + 25):
+    total_shift = i * 3
+    rolling_array = np.roll(rolling_array, shift=3, axis=0)
+    working_df = pd.DataFrame(data=[rolling_array], columns=column_names)
     # print(f"{working_df=}")
     current_df_sequence = pd.concat(
         [current_df_sequence, working_df],
