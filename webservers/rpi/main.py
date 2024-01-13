@@ -83,9 +83,12 @@ if __name__ == "__main__":
             time.sleep(1)
             total_running_time_s += 1
             if total_running_time_s % 10 == 0:
-                string_to_check = r"press ctrl+c to stop\\n"
+                string_to_check = r"press ctrl+c to stop\n"
                 log_contents = config.log_capture.getvalue()
-                logger.debug(f"{log_contents[-50:]=}")
+                log_contents = log_contents[-50:]
+                logger.debug(
+                    f"{log_contents=} {string_to_check=} {log_contents.endswith(string_to_check)=}"
+                )
                 # if not config.log_capture.getvalue().endswith("press ctrl+c to stop"):
                 logger.getChild("main_loop").info("press ctrl+c to stop")
                 config.log_capture.truncate(100_000)
