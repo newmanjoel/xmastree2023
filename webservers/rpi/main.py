@@ -56,6 +56,7 @@ command_queue.put(
 
 
 if __name__ == "__main__":
+    total_running_time_s = 0
     stop_event.clear()
 
     web_server_thread = threading.Thread(
@@ -79,9 +80,11 @@ if __name__ == "__main__":
 
     try:
         while not stop_event.is_set():
-            time.sleep(120)
-            logger.getChild("main_loop").info("press ctrl+c to stop")
-            config.log_capture.truncate(100_000)
+            time.sleep(1)
+            total_running_time_s += 1
+            if total_running_time_s % 120:
+                logger.getChild("main_loop").info("press ctrl+c to stop")
+                config.log_capture.truncate(100_000)
     except KeyboardInterrupt:
         stop_event.set()
         web_server_thread.join()
