@@ -75,13 +75,12 @@ def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
 
 def convert_row_to_color(
     input_row: list[int], number_of_columns: int = 1500
-) -> list[Color]:
+) -> list[RGBW]:
     return_list = [0] * (number_of_columns // 3)
     for pixel_num in range(0, number_of_columns, 3):
         led_pixel_index = pixel_num // 3
-        # note that color takes in RGB and does not convert it to GRB, Lets do that here
         led_pixel_color = grb_to_int(
-            input_row[pixel_num + 1], input_row[pixel_num], input_row[pixel_num + 2]
+            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
         )
         return_list[led_pixel_index] = RGBW(led_pixel_color)
     return return_list
@@ -129,7 +128,6 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     local_logger.debug(
         f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
     )
-    local_logger.debug(f"{type(returned_list)=} {type(results)=} {results.dtype=}")
 
     return returned_list
 
