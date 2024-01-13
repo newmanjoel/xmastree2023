@@ -83,10 +83,11 @@ if __name__ == "__main__":
             time.sleep(1)
             total_running_time_s += 1
             if total_running_time_s % 120 == 0:
-                if not config.log_capture.getvalue().endswith(
-                    r"press ctrl+c to stop\n"
-                ):
-                    logger.getChild("main_loop").info("press ctrl+c to stop")
+                logger.debug(
+                    f"{config.log_capture.getvalue().endswith('press ctrl+c to stop')=}"
+                )
+                # if not config.log_capture.getvalue().endswith("press ctrl+c to stop"):
+                logger.getChild("main_loop").info("press ctrl+c to stop")
                 config.log_capture.truncate(100_000)
     except KeyboardInterrupt:
         stop_event.set()
