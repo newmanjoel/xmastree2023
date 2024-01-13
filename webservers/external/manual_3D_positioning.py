@@ -157,17 +157,27 @@ def update_webserver_to_show_point(
 
     # df_data = current_df_sequence.to_json(orient="split")
 
-    data1 = {"command": "off", "args": ""}
-    data2 = {"command": "single", "args": [point.index, 255, 0, 0]}
+    # data1 = {"command": "off", "args": ""}
+    data_to_send = []
+    if point_moved:
+        data_to_send.append(
+            {"command": "move_point", "args": [point.index, point.x, point.y, point.z]}
+        )
+    if plane_moved:
+        data_to_send.append(
+            {"command": "plane", "args": ["x", plane.x, 0, 255, 0, plane.tolerance]}
+        )
+    if point_moved:
+        data_to_send.append({"command": "single", "args": [point.index, 255, 0, 0]})
 
-    plane_light_indexs = []
-    for test_point in all_points:
-        if (plane.x - test_point.x) <= plane.tolerance:
-            plane_light_indexs.append(test_point.index)
-
-    with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
-        send_message(connection_to_rpi, json.dumps(data1).encode("utf-8"))
-        send_message(connection_to_rpi, json.dumps(data2).encode("utf-8"))
+    # plane_light_indexs = []
+    # for test_point in all_points:
+    #     if (plane.x - test_point.x) <= plane.tolerance:
+    #         plane_light_indexs.append(test_point.index)
+    if data_to_send:
+        with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
+            for data in data_to_send:
+                send_message(connection_to_rpi, json.dumps(data).encode("utf-8"))
 
     # with socket.create_connection((rpi_ip, rpi_port)) as connection_to_rpi:
     #     connection_to_rpi.sendall(json.dumps(data).encode("utf-8"))
@@ -208,6 +218,8 @@ def move_thing(
 def on_press(key) -> bool:
     global amount, working_point
     print(f"=> {key}, {type(key)=} {str(key)=}")
+    point_changed = False
+    plane_changed = False
     match str(key):
         case "Key.page_up":
             amount += 0.1
@@ -218,16 +230,22 @@ def on_press(key) -> bool:
             print(f"{amount=}")
         case "Key.up":
             move_thing(direction_enum.UP, working_point, amount)
+            point_changed = True
         case "Key.down":
             move_thing(direction_enum.DOWN, working_point, amount)
+            point_changed = True
         case "Key.left":
             move_thing(direction_enum.LEFT, working_point, amount)
+            point_changed = True
         case "Key.right":
             move_thing(direction_enum.RIGHT, working_point, amount)
+            point_changed = True
         case "'['":
             working_point = all_points[(working_point.index - 1) % light_num]
+            point_changed = True
         case "']'":
             working_point = all_points[(working_point.index + 1) % light_num]
+            point_changed = True
         case "f":
             pass
         case "Key.esc":
@@ -240,7 +258,9 @@ def on_press(key) -> bool:
         case _:
             pass
     print(f"{working_point=}")
-    update_webserver_to_show_point(working_point, working_plane)
+    update_webserver_to_show_point(
+        working_point, working_plane, point_changed, plane_changed
+    )
     return True
 
 
