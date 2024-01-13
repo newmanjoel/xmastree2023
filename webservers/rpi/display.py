@@ -94,10 +94,8 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     time_2 = time.time()
     working_df = sanitize_column_names(working_df)
     working_df.reindex(column_names, axis=1)
-    df_rows, df_columns = working_df.shape
     time_3 = time.time()
     raw_data = working_df.to_numpy(dtype=np.ubyte)
-    results = [[0]] * df_rows
     time_4 = time.time()
 
     results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
