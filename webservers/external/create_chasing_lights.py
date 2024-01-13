@@ -1,4 +1,5 @@
 from pathlib import Path
+import time
 import pandas as pd
 import numpy as np
 
@@ -30,8 +31,8 @@ for i in range(0, 200, 3):
     color_array[i] = int(color_ammount * fade_ammount)
     fade_ammount = fade_ammount * 0.8
 
-
-for i in range(led_num):
+sequence_start = time.time()
+for i in range(led_num + 50):
     working_array = np.roll(color_array, shift=i * 3, axis=0)
     working_df = pd.DataFrame(data=[working_array], columns=column_names)
     # print(f"{working_df=}")
@@ -41,13 +42,13 @@ for i in range(led_num):
         ignore_index=True,
     )
     # current_df_sequence.loc[i] = working_array
-
+sequence_end = time.time()
 current_df_sequence.index.name = "FRAME_ID"
-
-current_df_sequence.to_csv(
-    Path(
-        r"C:\Users\joell\OneDrive\Documents\GitHub\xmastree2023\examples\chasing_lights.csv"
-    )
+print(f"it took {sequence_end-sequence_start:0.3f}s to create the sequence")
+file_path = Path(
+    r"C:\Users\joell\OneDrive\Documents\GitHub\xmastree2023\examples\chasing_lights.csv"
 )
+current_df_sequence.to_csv(file_path)
 
 print(f"{current_df_sequence}")
+print(f"{file_path=}")
