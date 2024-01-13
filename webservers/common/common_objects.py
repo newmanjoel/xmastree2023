@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import re
 from typing import NamedTuple
 import functools
 from pathlib import Path
@@ -42,6 +43,19 @@ def log_when_functions_start_and_stop(
         return result
 
     return wrapper
+
+
+def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
+    return_df = input_df.copy(deep=True)
+
+    def is_matching_pattern(s):
+        pattern = re.compile(r"^[a-zA-Z]_\d+$")
+        return bool(pattern.match(s))
+
+    for name in return_df.columns:
+        if not is_matching_pattern(name):
+            return_df.drop(name, axis=1, inplace=True)
+    return return_df
 
 
 class Color(NamedTuple):

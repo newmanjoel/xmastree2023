@@ -17,3 +17,4 @@ led_pin: int = 12
 brightness: float = 1.0
 pixels = {}  # I dont like this
 current_dataframe = {}  # I dont like this
+fast_array = {}  # I dont like this

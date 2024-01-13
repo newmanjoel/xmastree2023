@@ -12,6 +12,7 @@ from common.common_objects import (
     all_standard_column_names,
     log_when_functions_start_and_stop,
     setup_common_logger,
+    sanitize_column_names,
 )
 
 # used for pushing the data out
@@ -60,19 +61,6 @@ def setup() -> PixelStrip:
     return pixels
 
 
-def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
-    return_df = input_df.copy(deep=True)
-
-    def is_matching_pattern(s):
-        pattern = re.compile(r"^[a-zA-Z]_\d+$")
-        return bool(pattern.match(s))
-
-    for name in return_df.columns:
-        if not is_matching_pattern(name):
-            return_df.drop(name, axis=1, inplace=True)
-    return return_df
-
-
 def convert_row_to_color(
     input_row: list[int], number_of_columns: int = 1500
 ) -> list[RGBW]:
@@ -96,7 +84,6 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     working_df.reindex(column_names, axis=1)
     time_3 = time.time()
     raw_data = working_df.to_numpy(dtype=np.ubyte)
-    raw_data = raw_data * float(config.brightness)
     raw_data = raw_data.astype(dtype=np.ubyte)
     time_4 = time.time()
 
@@ -139,6 +126,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
     data = [100, 0, 0] * config.led_num
     working_df = pd.DataFrame([data], index=range(1), columns=column_names)
     fast_array = convert_df_to_list_of_int_speedy(working_df)
+    config.fast_array = fast_array
     led_amount = int(config.led_num)
 
     while not stop_event.is_set():
@@ -149,9 +137,10 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
                 # working_df = working_df.mul(config.brightness)
                 local_logger.info("Changing to new df")
                 fast_array = convert_df_to_list_of_int_speedy(working_df)
+                # config.fast_array = fast_array
             except queue.Empty as e:
                 pass
-
+        # fast_array = config.fast_array
         for row in fast_array:
             if stop_event.is_set() or not display_queue.empty():
                 break

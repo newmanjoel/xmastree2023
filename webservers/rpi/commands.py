@@ -44,11 +44,12 @@ def handle_fps(*, value: float, **kwargs) -> None:
 def handle_brightness(*, value: float, display_queue: queue.Queue, **kwargs) -> None:
     limit = lambda x: min(max(float(x), 0.0), 1.0)
     config.brightness = limit(value)  # type: ignore
+    config.pixels.setBrightness(config.brightness * 255)  # type: ignore
     logger.getChild("set_brightness").debug(
-        f"setting brightness to {config.brightness}"
+        f"setting brightness to {config.brightness}/{config.brightness*255}"
     )
     # this triggers a refresh of the current dataframe.
-    display_queue.put(config.current_dataframe)
+    # display_queue.put(config.current_dataframe)
 
 
 def handle_getting_temp(*, send_back, send_queue: queue.Queue, **kwargs) -> None:
