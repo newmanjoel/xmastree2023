@@ -42,12 +42,11 @@ def handle_fps(*, value: float, **kwargs) -> None:
 
 
 def handle_brightness(*, value: float, display_queue: queue.Queue, **kwargs) -> None:
-    limit = lambda x: min(max(float(x), 0), 1)
+    limit = lambda x: min(max(float(x), 0.0), 1.0)
     config.pixels.brightness = limit(value)  # type: ignore
 
-    current_df_sequence = config.current_dataframe.copy(deep=True)  # type: ignore
-    current_df_sequence = current_df_sequence.mul(config.pixels.brightness)  # type: ignore
-    display_queue.put(current_df_sequence)
+    # this triggers a refresh of the current dataframe.
+    display_queue.put(config.current_dataframe)
 
 
 def handle_getting_temp(*, send_back, send_queue: queue.Queue, **kwargs) -> None:

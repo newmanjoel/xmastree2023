@@ -144,6 +144,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
             try:
                 working_df: pd.DataFrame = display_queue.get()
                 config.current_dataframe = working_df
+                working_df = working_df.mul(config.brightness)
                 local_logger.info("Changing to new df")
                 fast_array = convert_df_to_list_of_int_speedy(working_df)
             except queue.Empty as e:
