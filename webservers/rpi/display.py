@@ -1,5 +1,4 @@
 import logging
-import re
 import pandas as pd
 import numpy as np
 import time
@@ -10,18 +9,12 @@ import config
 from common.file_parser import grb_to_int
 from common.common_objects import (
     all_standard_column_names,
-    log_when_functions_start_and_stop,
     setup_common_logger,
     sanitize_column_names,
 )
 
 # used for pushing the data out
 from rpi_ws281x import Color, PixelStrip, ws, RGBW
-
-
-# LED strip configuration:
-LED_COUNT = 500  # Number of LED pixels.
-LED_PIN = 10  # GPIO pin connected to the pixels (must support PWM!).
 
 
 logger = logging.getLogger("display")
