@@ -83,7 +83,7 @@ if __name__ == "__main__":
             time.sleep(1)
             total_running_time_s += 1
             if total_running_time_s % 10 == 0:
-                string_to_check = r"press ctrl+c to stop\n"
+                string_to_check = "press ctrl+c to stop\n"
                 log_contents = config.log_capture.getvalue()
                 log_contents = log_contents[-50:]
                 logger.debug(
