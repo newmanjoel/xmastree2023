@@ -97,7 +97,6 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     time_3 = time.time()
     raw_data = working_df.to_numpy(dtype=np.ubyte)
     raw_data = raw_data * float(config.brightness)
-    local_logger.debug(f"scaled by {float(config.brightness)}")
     raw_data = raw_data.astype(dtype=np.ubyte)
     time_4 = time.time()
 
