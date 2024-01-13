@@ -96,6 +96,7 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     working_df.reindex(column_names, axis=1)
     time_3 = time.time()
     raw_data = working_df.to_numpy(dtype=np.ubyte)
+    raw_data = raw_data * float(config.brightness)
     time_4 = time.time()
 
     results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
@@ -144,7 +145,7 @@ def show_data_on_leds(stop_event: threading.Event, display_queue: queue.Queue) -
             try:
                 working_df: pd.DataFrame = display_queue.get()
                 config.current_dataframe = working_df
-                working_df = working_df.mul(config.brightness)
+                # working_df = working_df.mul(config.brightness)
                 local_logger.info("Changing to new df")
                 fast_array = convert_df_to_list_of_int_speedy(working_df)
             except queue.Empty as e:
