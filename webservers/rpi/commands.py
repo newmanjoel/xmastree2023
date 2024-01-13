@@ -81,9 +81,10 @@ def handle_fill(*, value: list[int], display_queue: queue.Queue, **kwargs):
             f"trying to fill with more than 3 elements {len(value)=}\n{value=}"
         )
         return
-    color_r = int(value[0])
-    color_g = int(value[1])
-    color_b = int(value[2])
+    limit = lambda x: min(max(int(x), 0), 255)
+    color_r = limit(value[0])
+    color_g = limit(value[1])
+    color_b = limit(value[2])
     data = [color_r, color_g, color_b] * config.led_num
 
     current_df_sequence = pd.DataFrame(
