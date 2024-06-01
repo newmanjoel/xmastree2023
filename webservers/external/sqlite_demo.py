@@ -1,6 +1,9 @@
+from functools import lru_cache
+import re
 import sqlite3
 from pathlib import Path
 import pandas as pd
+import numpy as np
 from numpy import ubyte
 import time
 import logging
@@ -30,6 +33,96 @@ def setup_common_logger(logger: logging.Logger) -> logging.Logger:
 
 
 logger = setup_common_logger(logging.getLogger("sqlite_demo"))
+
+
+@lru_cache(maxsize=2)
+def all_standard_column_names(num: int) -> list[str]:
+    results = []
+    for i in range(num):
+        results.append(f"R_{i}")
+        results.append(f"G_{i}")
+        results.append(f"B_{i}")
+    return results
+
+
+column_names = all_standard_column_names(500)
+
+
+@lru_cache(maxsize=16777216, typed=False)
+def grb_to_int(g: int, r: int, b: int) -> int:
+    return int((r << 16) | (g << 8) | b)
+
+
+def convert_row_to_color(
+    input_row: list[int], number_of_columns: int = 1500
+) -> list[int]:
+    return_list = [0] * (number_of_columns // 3)
+    for pixel_num in range(0, number_of_columns, 3):
+        led_pixel_index = pixel_num // 3
+        led_pixel_color = grb_to_int(
+            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
+        )
+        return_list[led_pixel_index] = led_pixel_color
+    return return_list
+
+
+def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
+    return_df = input_df.copy(deep=True)
+
+    def is_matching_pattern(s):
+        pattern = re.compile(r"^[a-zA-Z]_\d+$")
+        return bool(pattern.match(s))
+
+    for name in return_df.columns:
+        if not is_matching_pattern(name):
+            return_df.drop(name, axis=1, inplace=True)
+    return return_df
+
+
+def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
+    local_logger = logger.getChild("df_2_int")
+    local_logger.debug("starting conversion")
+    start_time = time.time()
+    working_df = input_df.copy(deep=True)
+    time_2 = time.time()
+    working_df = sanitize_column_names(working_df)
+    working_df.reindex(column_names, axis=1)
+    time_3 = time.time()
+    raw_data = working_df.to_numpy(dtype=np.ubyte)
+    raw_data = raw_data.astype(dtype=np.ubyte)
+    time_4 = time.time()
+
+    results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
+    returned_list = results.tolist()
+    end_time = time.time()
+
+    copy_time = time_2 - start_time
+    clean_time = time_3 - time_2
+    unit_change_time = time_4 - time_3
+    enumerate_time = end_time - time_4
+    total_time = end_time - start_time
+
+    # Benchmark
+    # copy:0.01650 clean:0.04447 types:0.00295 looping:7.64509 total:7.70900
+    # after cashing the grb_to_int function
+    # copy:0.01680 clean:0.04479 types:0.00313 looping:3.85402 total:3.91874
+    # after using numpy apply along axis
+    # copy:0.01663 clean:0.04498 types:0.00311 looping:11.00467 total:11.06938
+    # doubling down on numpy apply along axis
+    # copy:0.01734 clean:0.04529 types:0.00298 looping:10.99190 total:11.05752
+    # using np.apply_+along_axis for rows and cashed looping ints
+    # copy:0.01702 clean:0.04490 types:0.00296 looping:4.00124 total:4.06612
+    # using np.apply_along_axis for frames and looping for rows and casheing all the colors
+    # copy:0.01617 clean:0.04324 types:0.00275 looping:2.50638 total:2.56854
+
+    # using the np.apply_along_axis for rows and cashed looping ints as that seems to cleanest/fastest combo
+
+    local_logger.debug(
+        f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
+    )
+
+    return returned_list
+
 
 def create_and_save_database(db_name: str|Path):
     # Connect to the database (creates it if it doesn't exist)
@@ -106,19 +199,34 @@ def inert_dataframe_into_database(conn:sqlite3.Connection, dataframe: pd.DataFra
     for i in range(1,dataframe.shape[1], 3):
         pre_split_columns.append(dataframe.columns[i:i+3])
 
-    total_rows = dataframe.shape[0]
-
     start_database_entry = time.time()
+    speedy_data = dataframe.to_numpy(dtype=np.ubyte)
+
+    total_rows = len(speedy_data)
+    total_columns = len(speedy_data[0])
+
+    local_logger.debug(f"{total_rows=} {total_columns=}")
 
     data_to_injest = []
-    # FRAME_ID R_0 G_0 B_0 R_1 ->
-    row_index = 0
-    for index, row in dataframe.iterrows():
+    for row_index, row in enumerate(speedy_data):
         percent = float(row_index) / total_rows * 100
-        local_logger.debug(f"{percent:0.2f}%")
-        for led_number, col in enumerate(pre_split_columns):
-            data_to_injest.append((file_id, row_index, led_number, *row[col]))
-        row_index += 1
+        # local_logger.debug(f"{percent:0.2f}%")
+        led_number = 0
+        # local_logger.debug(f"{row=}")
+        for columns in range(1, total_columns - 1, 3):
+            # local_logger.debug(f"{columns=}")
+            data_to_injest.append(
+                (
+                    file_id,
+                    row_index,
+                    led_number,
+                    row[columns],
+                    row[columns + 1],
+                    row[columns + 2],
+                )
+            )
+            led_number += 1
+
     injest_time_end = time.time()
     logger.getChild("insert_dataframe_into_database").debug(
         f"adding to injest array took {injest_time_end-start_database_entry:0.3f}s"
@@ -168,9 +276,6 @@ def import_all_csv_from_folder(conn: sqlite3.Connection, folder:Path) -> None:
     import gc
     import_time_start = time.time()
     for file in list(folder.glob("*.csv")):
-        if file.name.find("bad_apple") != -1:
-            logger.getChild("import_all_csv_from_folder").warn(f"skipping: {file.name}")
-            continue
         logger.getChild("import_all_csv_from_folder").info(f"injesting: {file.name}")
         file_time_start = time.time()
         append_database_from_csv(conn, str(file), overwrite_if_already_injested=False)
