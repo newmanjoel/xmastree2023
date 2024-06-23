@@ -6,7 +6,7 @@ show_fps: bool = False
 frame_rate_arr: list[float] = []
 
 
-host: str = "192.168.4.205"
+host: str = "192.168.2.39"
 rx_port: int = 12345
 tx_port: int = 12346
 log_capture: StringIO = StringIO()
