@@ -48,82 +48,6 @@ def all_standard_column_names(num: int) -> list[str]:
 column_names = all_standard_column_names(500)
 
 
-@lru_cache(maxsize=16777216, typed=False)
-def grb_to_int(g: int, r: int, b: int) -> int:
-    return int((r << 16) | (g << 8) | b)
-
-
-def convert_row_to_color(
-    input_row: list[int], number_of_columns: int = 1500
-) -> list[int]:
-    return_list = [0] * (number_of_columns // 3)
-    for pixel_num in range(0, number_of_columns, 3):
-        led_pixel_index = pixel_num // 3
-        led_pixel_color = grb_to_int(
-            input_row[pixel_num], input_row[pixel_num + 1], input_row[pixel_num + 2]
-        )
-        return_list[led_pixel_index] = led_pixel_color
-    return return_list
-
-
-def sanitize_column_names(input_df: pd.DataFrame) -> pd.DataFrame:
-    return_df = input_df.copy(deep=True)
-
-    def is_matching_pattern(s):
-        pattern = re.compile(r"^[a-zA-Z]_\d+$")
-        return bool(pattern.match(s))
-
-    for name in return_df.columns:
-        if not is_matching_pattern(name):
-            return_df.drop(name, axis=1, inplace=True)
-    return return_df
-
-
-def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
-    local_logger = logger.getChild("df_2_int")
-    local_logger.debug("starting conversion")
-    start_time = time.time()
-    working_df = input_df.copy(deep=True)
-    time_2 = time.time()
-    working_df = sanitize_column_names(working_df)
-    working_df.reindex(column_names, axis=1)
-    time_3 = time.time()
-    raw_data = working_df.to_numpy(dtype=np.ubyte)
-    raw_data = raw_data.astype(dtype=np.ubyte)
-    time_4 = time.time()
-
-    results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
-    returned_list = results.tolist()
-    end_time = time.time()
-
-    copy_time = time_2 - start_time
-    clean_time = time_3 - time_2
-    unit_change_time = time_4 - time_3
-    enumerate_time = end_time - time_4
-    total_time = end_time - start_time
-
-    # Benchmark
-    # copy:0.01650 clean:0.04447 types:0.00295 looping:7.64509 total:7.70900
-    # after cashing the grb_to_int function
-    # copy:0.01680 clean:0.04479 types:0.00313 looping:3.85402 total:3.91874
-    # after using numpy apply along axis
-    # copy:0.01663 clean:0.04498 types:0.00311 looping:11.00467 total:11.06938
-    # doubling down on numpy apply along axis
-    # copy:0.01734 clean:0.04529 types:0.00298 looping:10.99190 total:11.05752
-    # using np.apply_+along_axis for rows and cashed looping ints
-    # copy:0.01702 clean:0.04490 types:0.00296 looping:4.00124 total:4.06612
-    # using np.apply_along_axis for frames and looping for rows and casheing all the colors
-    # copy:0.01617 clean:0.04324 types:0.00275 looping:2.50638 total:2.56854
-
-    # using the np.apply_along_axis for rows and cashed looping ints as that seems to cleanest/fastest combo
-
-    local_logger.debug(
-        f"copy:{copy_time:0.5f} clean:{clean_time:0.5f} types:{unit_change_time:0.5f} looping:{enumerate_time:0.5f} total:{total_time:0.5f}"
-    )
-
-    return returned_list
-
-
 def create_and_save_database(db_name: str|Path):
     # Connect to the database (creates it if it doesn't exist)
     conn = sqlite3.connect(db_name)
@@ -139,7 +63,8 @@ def create_and_save_database(db_name: str|Path):
     ''')
 
     # Create the 'rgb_values' table
-    cursor.execute('''
+    cursor.execute(
+        """
     CREATE TABLE IF NOT EXISTS rgb_values (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         file_id INTEGER NOT NULL,
@@ -149,8 +74,9 @@ def create_and_save_database(db_name: str|Path):
         green INTEGER NOT NULL,
         blue INTEGER NOT NULL,
         FOREIGN KEY (file_id) REFERENCES files (id)
+    ) STRICT
+    """
     )
-    ''')
 
     # Commit the changes and close the connection
     conn.commit()
@@ -192,15 +118,15 @@ def load_csv(csv_path:str) -> pd.DataFrame:
     logger.getChild("load_csv").debug(f"Loading file took {end-start:0.3f}s")
     return csv
 
-def inert_dataframe_into_database(conn:sqlite3.Connection, dataframe: pd.DataFrame, file_id:int) -> None:
+
+def insert_dataframe_into_database(
+    conn: sqlite3.Connection, dataframe: pd.DataFrame, file_id: int
+) -> None:
     local_logger = logger.getChild("insert_dataframe_into_database")
     data_cursor = conn.cursor()
-    pre_split_columns = []
-    for i in range(1,dataframe.shape[1], 3):
-        pre_split_columns.append(dataframe.columns[i:i+3])
 
     start_database_entry = time.time()
-    speedy_data = dataframe.to_numpy(dtype=np.ubyte)
+    speedy_data = dataframe.to_numpy()
 
     total_rows = len(speedy_data)
     total_columns = len(speedy_data[0])
@@ -209,20 +135,16 @@ def inert_dataframe_into_database(conn:sqlite3.Connection, dataframe: pd.DataFra
 
     data_to_injest = []
     for row_index, row in enumerate(speedy_data):
-        percent = float(row_index) / total_rows * 100
-        # local_logger.debug(f"{percent:0.2f}%")
         led_number = 0
-        # local_logger.debug(f"{row=}")
         for columns in range(1, total_columns - 1, 3):
-            # local_logger.debug(f"{columns=}")
             data_to_injest.append(
                 (
-                    file_id,
-                    row_index,
-                    led_number,
-                    row[columns],
-                    row[columns + 1],
-                    row[columns + 2],
+                    int(file_id),
+                    int(row_index),
+                    int(led_number),
+                    int(row[columns]),
+                    int(row[columns + 1]),
+                    int(row[columns + 2]),
                 )
             )
             led_number += 1
@@ -242,8 +164,9 @@ def inert_dataframe_into_database(conn:sqlite3.Connection, dataframe: pd.DataFra
     logger.getChild("insert_dataframe_into_database").debug(f"adding to database took {end_database_entry-start_database_entry:0.3f}s")
 
 
-def append_database_from_csv(conn : sqlite3.Connection, csv_path: str, overwrite_if_already_injested:bool = False) -> bool:
-
+def append_database_from_csv(
+    conn: sqlite3.Connection, csv_path: str, overwrite_if_already_injested: bool = False
+) -> bool:
     file_already_injested = check_if_file_already_injested(conn,csv_path)
     if file_already_injested and not overwrite_if_already_injested:
         logger.getChild("append_database_from_csv").info(f"{file_already_injested=}")
@@ -256,11 +179,62 @@ def append_database_from_csv(conn : sqlite3.Connection, csv_path: str, overwrite
     file_id: int = file_cursor.lastrowid  # type: ignore
     logger.getChild("append_database_from_csv").debug(f"csv contents: {data.shape=} file_id that was added {file_id=}")
 
-    inert_dataframe_into_database(conn, data, file_id)
+    insert_dataframe_into_database(conn, data, file_id)
 
     conn.commit()
     # conn.rollback()
     return True
+
+
+def export_file_to_csv(conn: sqlite3.Connection, file_path: Path, file_id: int) -> Path:
+    if type(file_path) is str:
+        file_path = Path(file_path)
+    file_path.touch(exist_ok=True)
+
+    cursor = conn.cursor()
+    cursor.execute("SELECT `id` FROM `files` WHERE `id`=?", (file_id,))
+    results = cursor.fetchall()
+    if len(results) == 0:
+        raise ValueError(f"{file_id=} not found in the sqlite database")
+    cursor.execute("SELECT `frames` FROM `files` WHERE `id`=?", (file_id,))
+    frame_num = cursor.fetchall()
+    if len(frame_num) != 1:
+        raise ValueError(
+            f"{frame_num=} should be a single number where the {len(frame_num)=}"
+        )
+    logger.getChild("export_test").debug(f"{frame_num=}")
+    frame_num = int(frame_num[0][0])  # type: ignore
+
+    # query = f"SELECT `frame`,`led`, `red`,`green`,`blue` FROM rgb_values WHERE file_id is {file_id} ORDER BY frame,led"
+    # df = pd.read_sql_query(query, conn)
+
+    with open(file_path, "w") as fo:
+
+        for frame_id in range(0, frame_num):
+            # each row is tuple containing the RGB values for a single LED
+            row_str = f"{frame_id}"
+            cursor.execute(
+                "SELECT `frame`,`led`, `red`,`green`,`blue` FROM rgb_values WHERE file_id is ? AND frame is ? ORDER BY frame,led",
+                (file_id, frame_id),
+            )
+            results = cursor.fetchall()
+            # results should be 500 rows by 5 columns
+            local_row = 0.0
+            for row_results in results:
+                # logger.getChild("export_test").debug(f"{local_row/500 *100}%")
+                row_str += f", {row_results[2]}, {row_results[3]}, {row_results[4]}"
+                local_row += 1.0
+            # append the row to the file
+            row_str = row_str + "\n"
+            fo.write(row_str)
+            logger.getChild("export_test").debug(f"{frame_id=}")
+
+    # df = pd.DataFrame(results)
+    # df = df.astype(np.int8)
+    # df.to_csv(file_path, index=False)
+
+    return file_path
+
 
 def get_view_in_conn(conn: sqlite3.Connection) -> None:
     get_view_start = time.time()
@@ -283,7 +257,9 @@ def import_all_csv_from_folder(conn: sqlite3.Connection, folder:Path) -> None:
         logger.getChild("import_all_csv_from_folder").info(f"injested: {file.name}| took {file_time_end-file_time_start:0.3f}s")
         collected = gc.collect()
         if collected > 0:
-            logger.getChild("import_all_csv_from_folder").warn(f"Garbage collector: collected {collected} objects")
+            logger.getChild("import_all_csv_from_folder").warning(
+                f"Garbage collector: collected {collected} objects"
+            )
     import_time_end = time.time()
     logger.getChild("import_all_csv_from_folder").info(
         f"Results time {import_time_end-import_time_start:0.3f}s"
@@ -304,4 +280,8 @@ with load_and_return_database(db_name) as conn:
     )
     # append_database_from_csv(conn, str(example_csv), overwrite_if_already_injested=True)
     # get_view_in_conn(conn)
-    conn.commit()
+    try:
+        output_file = export_file_to_csv(conn, Path(r"test_export_csv"), 17)
+        logger.info(f"{output_file.absolute()=}")
+    except ValueError as e:
+        logger.warning(e)
