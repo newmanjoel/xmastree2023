@@ -2,7 +2,7 @@ import board
 import neopixel
 import time
 
-led_num = 500
+led_num = 250
 pixels = neopixel.NeoPixel(
     board.D12, led_num, bpp=3, auto_write=False, pixel_order=neopixel.GRB
 )

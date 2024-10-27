@@ -1,2 +1,4 @@
 pandas
 colorlog
+paho-mqtt
+rpi_ws281x

@@ -4,6 +4,7 @@ import numpy as np
 import time
 import threading
 import queue
+from functools import partial
 
 import config
 from common.file_parser import grb_to_int
@@ -82,7 +83,9 @@ def convert_df_to_list_of_int_speedy(input_df: pd.DataFrame) -> list[list[int]]:
     raw_data = raw_data.astype(dtype=np.ubyte)
     time_4 = time.time()
 
-    results = np.apply_along_axis(convert_row_to_color, 1, raw_data)
+    converter = partial(convert_row_to_color,number_of_columns=750)
+
+    results = np.apply_along_axis(converter, 1, raw_data)
     returned_list = results.tolist()
     end_time = time.time()
 
