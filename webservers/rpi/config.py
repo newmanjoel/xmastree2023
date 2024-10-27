@@ -12,7 +12,7 @@ tx_port: int = 12346
 log_capture: StringIO = StringIO()
 
 
-led_num: int = 500
+led_num: int = 250
 led_pin: int = 12
 brightness: float = 1.0
 pixels = {}  # I dont like this

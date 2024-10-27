@@ -9,6 +9,8 @@ from functools import lru_cache
 import colorlog
 import time
 
+LED_NUM = 250
+
 
 def setup_common_logger(logger: logging.Logger) -> logging.Logger:
     formatter = logging.Formatter(
@@ -293,9 +295,9 @@ def convert_df_to_list_of_tuples(input_df: pd.DataFrame) -> list[list[tuple]]:
     df_rows, df_columns = input_df.shape
     results = [None] * df_rows
     for index, row in input_df.iterrows():
-        row_list = [None] * 500
+        row_list = [None] * LED_NUM
 
-        for pixel_num in range(500):
+        for pixel_num in range(LED_NUM):
             row_list[pixel_num] = (  # type: ignore
                 row[f"G_{pixel_num}"],
                 row[f"R_{pixel_num}"],
